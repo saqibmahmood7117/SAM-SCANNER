@@ -228,8 +228,22 @@
       z-index: 10;
     }
 
-    /* Hidden downsampled tracking canvas */
     #trackCanvas { display: none; }
+
+    /* Permission Friendly Screen (No popup alert) */
+    #camPermissionNotice {
+      position: absolute;
+      inset: 0;
+      background: #0a0f1d;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      gap: 14px;
+      z-index: 20;
+    }
 
     /* Single / Batch Pill */
     .pill-mode-container {
@@ -393,7 +407,6 @@
     .modal-head h3 { font-size: 0.95rem; font-weight: 700; }
     .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
 
-    /* Buttons */
     .pill-btn {
       padding: 8px 16px;
       border-radius: 20px;
@@ -414,21 +427,19 @@
 <body>
 
   <!-- =========================================================
-       VIEW 1: CAMSCANNER HOME SCREEN (MATCHING IMAGE 1)
+       VIEW 1: CAMSCANNER HOME SCREEN (IMAGE 1)
        ========================================================= -->
   <div id="homeScreen">
     
-    <!-- Top Search Header -->
     <div class="home-top-bar">
       <div class="search-box">
         <span>🔍</span>
         <input type="text" id="searchDocsInput" placeholder="Search" oninput="filterRecents(this.value)" />
       </div>
-      <div class="top-icon-btn" title="Cloud Sync" onclick="alert('Cloud sync enabled.')">☁️</div>
+      <div class="top-icon-btn" title="Cloud Sync" onclick="alert('Cloud sync active')">☁️</div>
       <div class="top-icon-btn" title="Premium" onclick="alert('SAM-SCANNER Pro: All features unlocked!')">👑</div>
     </div>
 
-    <!-- 8 Quick Tools Grid -->
     <div class="quick-tools-grid">
       <div class="quick-tool-item" onclick="openCameraView()">
         <div class="quick-tool-icon" style="background:#ecfdf5; color:#059669;">🖨️</div>
@@ -464,19 +475,15 @@
       </div>
     </div>
 
-    <!-- Recents Section -->
     <div class="recents-header">
       <span class="recents-title">Recents</span>
       <span class="recents-view-all" onclick="renderRecentsList()">View All ❯</span>
     </div>
 
-    <!-- Dynamic Recents List -->
     <div class="recents-list" id="recentsContainer"></div>
 
-    <!-- Floating Camera Button -->
     <button class="fab-camera" onclick="openCameraView()">📷</button>
 
-    <!-- Bottom Navigation Bar (Image 1) -->
     <div class="bottom-nav">
       <div class="nav-item active" onclick="showHomeScreen()">
         <span>🏠</span>
@@ -499,11 +506,10 @@
 
 
   <!-- =========================================================
-       VIEW 2: CAMSCANNER CAMERA & LIVE DETECT (MATCHING IMAGE 2)
+       VIEW 2: CAMSCANNER CAMERA & LIVE DETECT (IMAGE 2)
        ========================================================= -->
   <div id="cameraScreen">
     
-    <!-- Top Actions -->
     <div class="cam-top-bar">
       <div style="font-size: 1.3rem; cursor: pointer;" onclick="showHomeScreen()">✕</div>
       <div class="cam-top-actions">
@@ -514,15 +520,29 @@
       </div>
     </div>
 
-    <!-- Camera Viewport with Live Cyan Boundary Overlay -->
     <div class="cam-viewport">
       <video id="cameraVideo" autoplay playsinline></video>
-      <!-- Real-time Cyan Boundary Overlay Canvas -->
       <canvas id="liveBoundaryCanvas"></canvas>
       <canvas id="trackCanvas" width="240" height="320"></canvas>
+
+      <!-- Friendly Fallback Screen (No alerts) -->
+      <div id="camPermissionNotice">
+        <div style="font-size:2.5rem;">📷</div>
+        <h3 style="font-size:1.05rem; font-weight:700;">Live Camera Unavailable</h3>
+        <p style="font-size:0.8rem; color:#94a3b8; max-width:280px; margin-bottom:12px;">
+          Use your phone's built-in shutter directly or choose photos from your gallery:
+        </p>
+        <label class="pill-btn primary" style="cursor:pointer; padding:12px 24px; font-size:0.9rem;">
+          Take Photo (Phone Camera)
+          <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleImportedFiles(event)" />
+        </label>
+        <label class="pill-btn secondary" style="cursor:pointer; margin-top:6px;">
+          Choose from Gallery
+          <input type="file" accept="image/*" multiple style="display:none;" onchange="handleImportedFiles(event)" />
+        </label>
+      </div>
     </div>
 
-    <!-- Single / Batch Pill (Image 2) -->
     <div class="pill-mode-container">
       <div class="pill-mode-box">
         <button class="pill-mode-btn active" id="singlePill" onclick="setCapturePill('single')">Single</button>
@@ -530,7 +550,6 @@
       </div>
     </div>
 
-    <!-- Mode Carousel (Image 2) -->
     <div class="cam-mode-carousel">
       <span class="cam-mode-item" onclick="setCamMode('text')">Text</span>
       <span class="cam-mode-item" onclick="setCamMode('word')">To Word</span>
@@ -540,15 +559,14 @@
       <span class="cam-mode-item" onclick="setCamMode('idcard')">ID Cards</span>
     </div>
 
-    <!-- Shutter Deck (Image 2) -->
     <div class="cam-shutter-deck">
       <div class="cam-deck-btn" onclick="openModal('pdfToolsModal')">
         <span class="cam-deck-icon">⊞</span>
         <span>All Features</span>
       </div>
 
-      <!-- Glowing Cyan Shutter Button -->
-      <div class="cam-shutter-outer" onclick="takePhotoAndAutoCrop()">
+      <!-- Universal Shutter -->
+      <div class="cam-shutter-outer" onclick="handleShutterClick()">
         <div class="cam-shutter-inner"></div>
       </div>
 
@@ -573,21 +591,20 @@
     <div class="review-viewport">
       <canvas id="cropCanvas" style="display: none;"></canvas>
       <canvas id="displayCanvas"></canvas>
-      <div id="magnifier"><canvas id="magnifierCanvas" width="90" height="90"></canvas></div>
     </div>
 
     <div class="review-bottom-bar">
       <div style="display: flex; justify-content: space-around; padding: 10px 14px; background:#141f32;">
-        <button class="pill-btn secondary" onclick="reopenManualCrop()">📐 Adjust Crop</button>
         <button class="pill-btn secondary" onclick="applyMagicFilter('magic')">Magic Color</button>
         <button class="pill-btn secondary" onclick="applyMagicFilter('bw')">B&W</button>
         <button class="pill-btn secondary" onclick="openModal('sigModal')">✍️ Sign</button>
+        <button class="pill-btn secondary" onclick="openModal('watermarkModal')">🛡️ Watermark</button>
       </div>
     </div>
   </div>
 
-  <!-- Hidden global file input -->
   <input type="file" id="globalFileInput" accept="image/*" multiple style="display: none;" onchange="handleImportedFiles(event)" />
+  <input type="file" id="nativeShutterInput" accept="image/*" capture="environment" style="display: none;" onchange="handleImportedFiles(event)" />
 
   <!-- PDF Tools Modal -->
   <div class="modal-sheet" id="pdfToolsModal">
@@ -629,22 +646,18 @@
   </div>
 
   <script>
-    // App Navigation State
     let currentStream = null;
-    let capturePillMode = "single"; // 'single' or 'batch'
+    let capturePillMode = "single";
     let currentCamMode = "scan";
     let liveTrackingInterval = null;
 
-    // Detected Boundary State
-    let liveDetectedCorners = null; // [TL, TR, BR, BL]
+    let liveDetectedCorners = null;
     let smoothedCorners = null;
     let capturedRawImage = new Image();
     let unenhancedDewarped = null;
 
-    // Saved Documents in Recents
     let savedDocuments = JSON.parse(localStorage.getItem("sam_saved_docs") || "[]");
 
-    // Elements
     const homeScreen = document.getElementById("homeScreen");
     const cameraScreen = document.getElementById("cameraScreen");
     const reviewScreen = document.getElementById("reviewScreen");
@@ -655,14 +668,10 @@
     const trackCtx = trackCvs.getContext("2d");
     const displayCvs = document.getElementById("displayCanvas");
     const displayCtx = displayCvs.getContext("2d");
-    const cropCvs = document.getElementById("cropCanvas");
-    const cropCtx = cropCvs.getContext("2d");
     const sigCvs = document.getElementById("sigCanvas");
     const sigCtx = sigCvs.getContext("2d");
+    const permNotice = document.getElementById("camPermissionNotice");
 
-    // =========================================================
-    // 1. HOME SCREEN & RECENTS LIST (IMAGE 1)
-    // =========================================================
     function showHomeScreen() {
       stopCamera();
       cameraScreen.style.display = "none";
@@ -698,7 +707,7 @@
             <img src="${doc.thumb || doc.pages[0]}" class="doc-thumb" />
             <div class="doc-info">
               <div class="doc-title">${doc.title}</div>
-              <div class="doc-meta">${doc.date} \vert{} 📄 ${doc.pages.length}</div>
+              <div class="doc-meta">${doc.date} | 📄 ${doc.pages.length}</div>
             </div>
             <input type="checkbox" style="width:18px; height:18px;" />
           </div>
@@ -712,27 +721,37 @@
       });
     }
 
-    function filterRecents(query) {
-      renderRecentsList(query);
+    function filterRecents(query) { renderRecentsList(query); }
+    function triggerFileInput() { document.getElementById("globalFileInput").click(); }
+
+    // Progressive Camera Initializer (Fixes Overconstrained Error)
+    async function requestCameraStream() {
+      const constraints = [
+        { video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false },
+        { video: { facingMode: "environment" }, audio: false },
+        { video: true, audio: false }
+      ];
+
+      for (let c of constraints) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(c);
+        } catch (e) {
+          console.warn("Retrying with relaxed camera constraint:", e);
+        }
+      }
+      throw new Error("Camera stream denied or unavailable");
     }
 
-    function triggerFileInput() {
-      document.getElementById("globalFileInput").click();
-    }
-
-    // =========================================================
-    // 2. LIVE CAMERA VIEWFINDER & REAL-TIME AUTODETECT (IMAGE 2)
-    // =========================================================
     async function openCameraView(mode = "scan") {
       homeScreen.style.display = "none";
       reviewScreen.style.display = "none";
       cameraScreen.style.display = "flex";
+      permNotice.style.display = "none";
+      video.style.display = "block";
       setCamMode(mode);
 
       try {
-        currentStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-        });
+        currentStream = await requestCameraStream();
         video.srcObject = currentStream;
         video.onloadedmetadata = () => {
           liveCvs.width = video.videoWidth;
@@ -740,8 +759,9 @@
           startLiveBoundaryTracking();
         };
       } catch (err) {
-        alert("Camera stream unavailable. Triggering native camera shutter.");
-        triggerFileInput();
+        // Show in-UI friendly fallback instead of alert
+        video.style.display = "none";
+        permNotice.style.display = "flex";
       }
     }
 
@@ -750,6 +770,16 @@
       if (currentStream) {
         currentStream.getTracks().forEach(t => t.stop());
         currentStream = null;
+      }
+    }
+
+    function handleShutterClick() {
+      // If live camera is actively streaming
+      if (currentStream && video.videoWidth) {
+        takePhotoAndAutoCrop();
+      } else {
+        // Direct phone shutter fallback
+        document.getElementById("nativeShutterInput").click();
       }
     }
 
@@ -767,16 +797,13 @@
       }
     }
 
-    // =========================================================
-    // 3. REAL-TIME OUTWARD RADIAL BOUNDARY DETECTION OVERLAY
-    // =========================================================
+    // Real-Time Radial Ray-Casting Boundary Tracking
     function startLiveBoundaryTracking() {
       if (liveTrackingInterval) clearInterval(liveTrackingInterval);
 
       liveTrackingInterval = setInterval(() => {
         if (!video.videoWidth) return;
 
-        // Downsample video frame to 240x320 for ultra-fast <5ms calculation
         const sw = 240;
         const sh = Math.round(240 * (video.videoHeight / video.videoWidth));
         trackCvs.width = sw;
@@ -789,7 +816,6 @@
           gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
         }
 
-        // 1. Locate paper center seed (center 40% area)
         let bestCx = Math.floor(sw / 2), bestCy = Math.floor(sh / 2);
         let maxLum = 0;
         for (let y = Math.floor(sh * 0.3); y < sh * 0.7; y += 12) {
@@ -799,7 +825,6 @@
           }
         }
 
-        // 2. Cast 48 radial rays outward from paper seed
         const numRays = 48;
         const boundaryPts = [];
         const scaleX = video.videoWidth / sw;
@@ -819,7 +844,6 @@
 
             if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) break;
             
-            // Drop from bright white paper to desk
             if (gray[yIn * sw + xIn] - gray[yOut * sw + xOut] >= 22) {
               foundR = r;
               break;
@@ -830,7 +854,6 @@
           }
         }
 
-        // 3. Extract 4 paper corners
         if (boundaryPts.length >= 18) {
           let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
           let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
@@ -845,7 +868,6 @@
 
           const rawCorners = [tl, tr, br, bl];
 
-          // Exponential Moving Average (EMA) to prevent jitter in live view
           if (!smoothedCorners) {
             smoothedCorners = rawCorners;
           } else {
@@ -855,8 +877,6 @@
             }
           }
           liveDetectedCorners = smoothedCorners;
-
-          // Draw Glowing Cyan Polygon (Exactly like Image 2)
           drawLiveCyanPolygon(liveDetectedCorners);
         } else {
           liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
@@ -868,7 +888,6 @@
       liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
 
       liveCtx.save();
-      // Glowing Cyan Border
       liveCtx.beginPath();
       liveCtx.moveTo(pts[0].x, pts[0].y);
       liveCtx.lineTo(pts[1].x, pts[1].y);
@@ -882,11 +901,9 @@
       liveCtx.shadowBlur = 10;
       liveCtx.stroke();
 
-      // Subtle translucent cyan fill
       liveCtx.fillStyle = "rgba(0, 240, 181, 0.08)";
       liveCtx.fill();
 
-      // Small corner dots
       pts.forEach(pt => {
         liveCtx.beginPath();
         liveCtx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI);
@@ -897,9 +914,6 @@
       liveCtx.restore();
     }
 
-    // =========================================================
-    // 4. SHUTTER CAPTURE & AUTO-DEWARP TO DOCUMENT
-    // =========================================================
     function takePhotoAndAutoCrop() {
       const snapCanvas = document.createElement("canvas");
       snapCanvas.width = video.videoWidth;
@@ -927,7 +941,6 @@
       reader.onload = (evt) => {
         capturedRawImage.onload = () => {
           stopCamera();
-          // Detect corners on imported image
           const corners = [
             { x: capturedRawImage.width * 0.08, y: capturedRawImage.height * 0.08 },
             { x: capturedRawImage.width * 0.92, y: capturedRawImage.height * 0.08 },
@@ -941,7 +954,6 @@
       reader.readAsDataURL(file);
     }
 
-    // Projective Mesh Dewarping
     function dewarpAndRender(img, pts) {
       cameraScreen.style.display = "none";
       homeScreen.style.display = "none";
@@ -954,7 +966,6 @@
       displayCvs.width = targetW;
       displayCvs.height = targetH;
 
-      // Projective bilinear interpolation mapping
       const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
       const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
       const det = dx1 * dy2 - dx2 * dy1;
@@ -1019,7 +1030,6 @@
       ctx.restore();
     }
 
-    // CamScanner Magic Color Filter
     function applyMagicFilter(type) {
       displayCtx.drawImage(unenhancedDewarped, 0, 0);
       const imgData = displayCtx.getImageData(0, 0, displayCvs.width, displayCvs.height);
@@ -1047,7 +1057,6 @@
       displayCtx.putImageData(imgData, 0, 0);
     }
 
-    // Save Scanned Page into Recents List on Home Screen
     function saveToRecentsAndHome() {
       const now = new Date();
       const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -1094,11 +1103,9 @@
       img.src = doc.pages[0];
     }
 
-    // Modal Helpers
     function openModal(id) { document.getElementById(id).style.display = "flex"; }
     function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
-    // Init
     window.onload = showHomeScreen;
   </script>
 </body>
