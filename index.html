@@ -56,7 +56,7 @@
     }
     .nav-tab-btn.highlight { background: var(--primary); color: #fff; border-color: var(--primary-light); }
 
-    /* Main Document Viewport */
+    /* Main Viewport */
     .viewport {
       flex: 1;
       position: relative;
@@ -110,7 +110,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    /* Start / Capture Landing Screen */
+    /* Start Screen */
     #cameraStartScreen {
       position: absolute;
       inset: 0;
@@ -170,7 +170,6 @@
       z-index: 20;
     }
 
-    /* Capture Modes */
     .mode-slider {
       display: flex;
       justify-content: flex-start;
@@ -185,7 +184,6 @@
     .mode-item { cursor: pointer; transition: color 0.2s; padding: 4px 6px; }
     .mode-item.active { color: var(--primary-light); border-bottom: 2px solid var(--primary-light); }
 
-    /* Shutter Deck */
     .shutter-deck {
       display: flex;
       justify-content: space-around;
@@ -225,7 +223,6 @@
       font-size: 1.15rem;
     }
 
-    /* Filter Carousel */
     .filter-tray {
       display: flex;
       gap: 10px;
@@ -257,7 +254,6 @@
     .filter-chip.active .filter-thumb { border-color: var(--primary-light); color: #fff; background: var(--primary-dark); }
     .filter-chip span { font-size: 0.7rem; color: #cbd5e1; }
 
-    /* Sliders */
     .sliders-ribbon {
       display: flex;
       align-items: center;
@@ -269,7 +265,6 @@
     }
     .sliders-ribbon input[type="range"] { flex: 1; accent-color: var(--primary-light); }
 
-    /* Premium Quick Tools */
     .premium-tools {
       display: flex;
       justify-content: space-around;
@@ -292,7 +287,6 @@
     .premium-btn span { font-size: 1.1rem; }
     .premium-btn.active-tool { color: var(--primary-light); }
 
-    /* Buttons */
     .pill-btn {
       padding: 8px 15px;
       border-radius: 20px;
@@ -308,7 +302,6 @@
     .pill-btn.secondary { background: var(--surface-light); color: #cbd5e1; }
     .pill-btn.danger { background: var(--danger); color: #fff; }
 
-    /* Universal Modal Sheets */
     .modal-sheet {
       position: absolute;
       bottom: 0;
@@ -333,7 +326,6 @@
     .color-chip { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
     .color-chip.selected { transform: scale(1.15); box-shadow: 0 0 8px #fff; }
 
-    /* Grid for PDF Tools & Converters */
     .tool-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -375,7 +367,7 @@
     </div>
   </header>
 
-  <!-- Multi-page Preview Strip with Reordering -->
+  <!-- Multi-page Preview Strip -->
   <div class="pages-slider" id="pagesSlider" style="display: none;"></div>
 
   <!-- Document Viewport -->
@@ -392,7 +384,7 @@
     </div>
 
     <!-- Status Toast Notification -->
-    <div id="statusToast">Processing Document...</div>
+    <div id="statusToast">Detecting Document Boundary...</div>
 
     <!-- Start / Capture Screen -->
     <div id="cameraStartScreen">
@@ -417,7 +409,7 @@
     </div>
   </div>
 
-  <!-- MODAL 1: PDF Tools Suite (From Image 1) -->
+  <!-- MODAL 1: PDF Tools Suite -->
   <div class="modal-sheet" id="pdfToolsModal">
     <div class="modal-head">
       <h3>PDF Tools</h3>
@@ -459,7 +451,7 @@
     </div>
   </div>
 
-  <!-- MODAL 2: Converters & Smart Features (From Image 2) -->
+  <!-- MODAL 2: Converters & Smart Features -->
   <div class="modal-sheet" id="converterModal">
     <div class="modal-head">
       <h3>AI Converters & Features</h3>
@@ -642,6 +634,7 @@
     <!-- State 2: 8-Point Crop Deck -->
     <div id="cropDeck" style="display: none;">
       <div style="display: flex; justify-content: space-between; padding: 12px 14px; gap: 6px;">
+        <button class="pill-btn secondary" onclick="triggerAutoDetect()">⚡ Auto Snap</button>
         <button class="pill-btn secondary" onclick="selectAllCrop()">Full Page</button>
         <button class="pill-btn secondary" onclick="rotate90()">Rotate ↻</button>
         <button class="pill-btn primary" onclick="applyPerspectiveCrop()">Dewarp & Crop ➔</button>
@@ -724,7 +717,7 @@
     const sigCtx = sigCanvas.getContext("2d");
 
     let currentStream = null;
-    let scanMode = "doc"; // 'doc', 'idcard', 'book', 'idphoto', 'jigsaw'
+    let scanMode = "doc";
     let rawImage = new Image();
     let unenhancedDewarpedImage = null;
     let baseFilteredImageData = null;
@@ -732,17 +725,14 @@
     let activeIndex = -1;
     let currentFilter = "magic";
 
-    // 8-point crop system
     let corners = [];
     let activeCornerIdx = -1;
 
-    // Signature & drawing state
     let isDrawingSig = false;
     let currentSigColor = "#000000";
     let activeManualTool = null;
     let isPaintingManual = false;
 
-    // ID Card 2-in-1 State
     let idCardStep = 0;
     let idFrontImage = null;
 
@@ -766,7 +756,7 @@
       } else if (mode === "book") {
         showToast("Scan Books: Capture open 2-page spread");
       } else if (mode === "idphoto") {
-        showToast("ID Photo: Take a portrait photo");
+        showToast("ID Photo: Take portrait photo");
       } else if (mode === "jigsaw") {
         spliceJigsawOntoA4();
       }
@@ -782,7 +772,7 @@
         video.style.display = "block";
         document.getElementById("guideBox").style.display = "block";
       } catch (err) {
-        showToast("Direct Camera Triggered");
+        showToast("Opening Phone Camera");
         const tempInput = document.createElement("input");
         tempInput.type = "file";
         tempInput.accept = "image/*";
@@ -847,7 +837,6 @@
       loadSingleImage(src);
     }
 
-    // 1. ID Card 2-in-1 Composite
     function createIdCardComposite(frontImg, backImg) {
       showToast("Generating ID Card copy...");
       const a4W = 1240, a4H = 1754;
@@ -873,7 +862,6 @@
       saveCanvasAsProcessedPage();
     }
 
-    // 2. Scan Books (Dual-Page Split)
     function splitBookSpread(src) {
       showToast("Splitting Left & Right Pages...");
       const img = new Image();
@@ -881,13 +869,11 @@
         const halfW = Math.floor(img.width / 2);
         const h = img.height;
 
-        // Left Page
         const leftCvs = document.createElement("canvas");
         leftCvs.width = halfW; leftCvs.height = h;
         leftCvs.getContext("2d").drawImage(img, 0, 0, halfW, h, 0, 0, halfW, h);
         pages.push({ dataUrl: leftCvs.toDataURL("image/jpeg", 0.92), width: halfW, height: h });
 
-        // Right Page
         const rightCvs = document.createElement("canvas");
         rightCvs.width = halfW; rightCvs.height = h;
         rightCvs.getContext("2d").drawImage(img, halfW, 0, halfW, h, 0, 0, halfW, h);
@@ -901,13 +887,12 @@
       img.src = src;
     }
 
-    // 3. ID Photo Maker (Standard 35x45mm)
     function createIdPhoto(src) {
       showToast("Cropping ID Portrait...");
       const img = new Image();
       img.onload = () => {
         const w = 420;
-        const h = 540; // 35x45 ratio
+        const h = 540;
         displayCanvas.width = w;
         displayCanvas.height = h;
 
@@ -929,7 +914,6 @@
       showToast("Background Updated");
     }
 
-    // 4. Jigsaw Mode (Splice multiple pages onto A4 sheet)
     function spliceJigsawOntoA4() {
       if (pages.length < 2) return alert("Scan at least 2 pages to use Jigsaw mode.");
       showToast("Splicing pages onto single A4 sheet...");
@@ -948,7 +932,7 @@
         {x: 20, y: a4H/2 + 10}, {x: a4W/2 + 10, y: a4H/2 + 10}
       ];
 
-      countLoaded = 0;
+      let countLoaded = 0;
       for (let i = 0; i < count; i++) {
         const pImg = new Image();
         pImg.onload = () => {
@@ -988,20 +972,24 @@
       rawImage.src = src;
     }
 
-    // Distortion-Proof Corner Detection
-    function autoDetectDocumentCorners(img) {
+    // =========================================================================
+    // ADVANCED OUTWARD RADIAL RAY-CASTING DOCUMENT BOUNDARY DETECTOR
+    // =========================================================================
+    function detectDocumentBoundary(img) {
       const w = img.width, h = img.height;
-      const safeDefault = [
-        { x: w * 0.04, y: h * 0.04 },
-        { x: w * 0.96, y: h * 0.04 },
-        { x: w * 0.96, y: h * 0.96 },
-        { x: w * 0.04, y: h * 0.96 }
+      
+      const fallback = [
+        { x: w * 0.08, y: h * 0.08 },
+        { x: w * 0.92, y: h * 0.08 },
+        { x: w * 0.92, y: h * 0.92 },
+        { x: w * 0.08, y: h * 0.92 }
       ];
 
       try {
         const maxDim = 320;
         const scale = Math.min(maxDim / w, maxDim / h, 1);
-        const sw = Math.floor(w * scale), sh = Math.floor(h * scale);
+        const sw = Math.floor(w * scale);
+        const sh = Math.floor(h * scale);
 
         const cvs = document.createElement("canvas");
         cvs.width = sw; cvs.height = sh;
@@ -1010,59 +998,116 @@
 
         const d = ctx.getImageData(0, 0, sw, sh).data;
         const gray = new Uint8Array(sw * sh);
-        let totalLum = 0;
         for (let i = 0; i < d.length; i += 4) {
-          const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-          gray[i / 4] = lum;
-          totalLum += lum;
+          gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
         }
-        const avgLum = totalLum / (sw * sh);
 
-        let borderLum = 0, borderCount = 0;
-        for (let x = 0; x < sw; x++) { borderLum += gray[x] + gray[(sh - 1) * sw + x]; borderCount += 2; }
-        for (let y = 0; y < sh; y++) { borderLum += gray[y * sw] + gray[y * sw + sw - 1]; borderCount += 2; }
-        const bgAvg = borderLum / borderCount;
+        // 1. Locate paper center seed (search inside central 40% area)
+        let bestCx = Math.floor(sw / 2);
+        let bestCy = Math.floor(sh / 2);
+        let maxLum = 0;
+        const minX = Math.floor(sw * 0.3), maxX = Math.floor(sw * 0.7);
+        const minY = Math.floor(sh * 0.3), maxY = Math.floor(sh * 0.7);
 
-        if (Math.abs(avgLum - bgAvg) < 18) return safeDefault;
-
-        const isDocLighter = avgLum >= bgAvg;
-        const threshold = (avgLum + bgAvg) / 2;
-
-        let minSum = Infinity, maxSum = -Infinity;
-        let minDiff = Infinity, maxDiff = -Infinity;
-        let tl = { x: sw * 0.04, y: sh * 0.04 };
-        let tr = { x: sw * 0.96, y: sh * 0.04 };
-        let br = { x: sw * 0.96, y: sh * 0.96 };
-        let bl = { x: sw * 0.04, y: sh * 0.96 };
-        let count = 0;
-
-        for (let y = 0; y < sh; y++) {
-          for (let x = 0; x < sw; x++) {
-            const val = gray[y * sw + x];
-            if (isDocLighter ? val > threshold : val < threshold) {
-              count++;
-              const s = x + y, diff = x - y;
-              if (s < minSum) { minSum = s; tl = { x, y }; }
-              if (s > maxSum) { maxSum = s; br = { x, y }; }
-              if (diff > maxDiff) { maxDiff = diff; tr = { x, y }; }
-              if (diff < minDiff) { minDiff = diff; bl = { x, y }; }
+        for (let y = minY; y < maxY; y += 8) {
+          for (let x = minX; x < maxX; x += 8) {
+            let sum = 0;
+            for (let dy = -2; dy <= 2; dy++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                sum += gray[(y + dy) * sw + (x + dx)];
+              }
+            }
+            const avg = sum / 25;
+            if (avg > maxLum) {
+              maxLum = avg;
+              bestCx = x;
+              bestCy = y;
             }
           }
         }
 
-        if (count > (sw * sh * 0.25) && count < (sw * sh * 0.92)) {
-          const detected = [
-            { x: Math.max(0, tl.x / scale), y: Math.max(0, tl.y / scale) },
-            { x: Math.min(w, tr.x / scale), y: Math.max(0, tr.y / scale) },
-            { x: Math.min(w, br.x / scale), y: Math.min(h, br.y / scale) },
-            { x: Math.max(0, bl.x / scale), y: Math.min(h, bl.y / scale) }
-          ];
-          const topW = Math.hypot(detected[1].x - detected[0].x, detected[1].y - detected[0].y);
-          const botW = Math.hypot(detected[2].x - detected[3].x, detected[2].y - detected[3].y);
-          if (Math.abs(topW - botW) / Math.max(topW, botW) < 0.35) return detected;
+        // 2. Cast 64 radial rays outward from document seed to detect paper boundary
+        const numRays = 64;
+        const boundaryPts = [];
+        const dropLimits = [35, 25, 18];
+
+        for (let t = 0; t < dropLimits.length; t++) {
+          const dropLimit = dropLimits[t];
+          boundaryPts.length = 0;
+
+          for (let i = 0; i < numRays; i++) {
+            const angle = (2 * Math.PI * i) / numRays;
+            const cosA = Math.cos(angle);
+            const sinA = Math.sin(angle);
+            const maxR = Math.hypot(sw, sh);
+
+            let foundR = null;
+            for (let r = 12; r < maxR; r += 2) {
+              const xIn = Math.round(bestCx + (r - 4) * cosA);
+              const yIn = Math.round(bestCy + (r - 4) * sinA);
+              const xOut = Math.round(bestCx + (r + 4) * cosA);
+              const yOut = Math.round(bestCy + (r + 4) * sinA);
+
+              if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) {
+                break;
+              }
+
+              // Detect first sharp drop from white paper to surrounding desk
+              const diff = gray[yIn * sw + xIn] - gray[yOut * sw + xOut];
+              if (diff >= dropLimit) {
+                foundR = r;
+                break;
+              }
+            }
+
+            if (foundR !== null) {
+              boundaryPts.push({
+                x: Math.round(bestCx + foundR * cosA),
+                y: Math.round(bestCy + foundR * sinA)
+              });
+            }
+          }
+
+          if (boundaryPts.length >= 24) break;
         }
-      } catch (err) {}
-      return safeDefault;
+
+        // 3. Extract the 4 Quadrilateral Paper Corners
+        if (boundaryPts.length >= 20) {
+          let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
+          let minSum = Infinity, maxSum = -Infinity;
+          let minDiff = Infinity, maxDiff = -Infinity;
+
+          for (let i = 0; i < boundaryPts.length; i++) {
+            const pt = boundaryPts[i];
+            const s = pt.x + pt.y;
+            const diff = pt.x - pt.y;
+
+            if (s < minSum) { minSum = s; tl = pt; }
+            if (s > maxSum) { maxSum = s; br = pt; }
+            if (diff > maxDiff) { maxDiff = diff; tr = pt; }
+            if (diff < minDiff) { minDiff = diff; bl = pt; }
+          }
+
+          const detectedCorners = [
+            { x: Math.max(0, Math.min(w, tl.x / scale)), y: Math.max(0, Math.min(h, tl.y / scale)) },
+            { x: Math.max(0, Math.min(w, tr.x / scale)), y: Math.max(0, Math.min(h, tr.y / scale)) },
+            { x: Math.max(0, Math.min(w, br.x / scale)), y: Math.max(0, Math.min(h, br.y / scale)) },
+            { x: Math.max(0, Math.min(w, bl.x / scale)), y: Math.max(0, Math.min(h, bl.y / scale)) }
+          ];
+
+          const topW = Math.hypot(detectedCorners[1].x - detectedCorners[0].x, detectedCorners[1].y - detectedCorners[0].y);
+          const leftH = Math.hypot(detectedCorners[3].x - detectedCorners[0].x, detectedCorners[3].y - detectedCorners[0].y);
+
+          if (topW > w * 0.25 && leftH > h * 0.25) {
+            showToast("✓ Document Paper Snapped!");
+            return detectedCorners;
+          }
+        }
+      } catch (err) {
+        console.error("Ray boundary detection error:", err);
+      }
+
+      return fallback;
     }
 
     function showToast(msg) {
@@ -1072,11 +1117,19 @@
       setTimeout(() => { toast.style.display = "none"; }, 2500);
     }
 
+    function triggerAutoDetect() {
+      corners = detectDocumentBoundary(rawImage);
+      renderCropOverlay();
+      showToast("Corners Snapped to Paper");
+    }
+
     function initCropScreen() {
       hideAllViewportOverlays();
       cropCanvas.width = rawImage.width;
       cropCanvas.height = rawImage.height;
-      corners = autoDetectDocumentCorners(rawImage);
+
+      // Automatically find paper boundaries
+      corners = detectDocumentBoundary(rawImage);
 
       cropCanvas.style.display = "block";
       displayCanvas.style.display = "none";
@@ -1091,6 +1144,7 @@
     function renderCropOverlay() {
       cropCtx.drawImage(rawImage, 0, 0);
 
+      // Boundary polygon
       cropCtx.beginPath();
       cropCtx.moveTo(corners[0].x, corners[0].y);
       for (let i = 1; i < 4; i++) cropCtx.lineTo(corners[i].x, corners[i].y);
@@ -1101,6 +1155,7 @@
       cropCtx.fillStyle = "rgba(16, 185, 129, 0.18)";
       cropCtx.fill();
 
+      // Corner handles
       corners.forEach(c => {
         cropCtx.beginPath();
         cropCtx.arc(c.x, c.y, 24, 0, 2 * Math.PI);
@@ -1111,6 +1166,7 @@
         cropCtx.stroke();
       });
 
+      // 4 Edge Midpoint Handles
       for (let i = 0; i < 4; i++) {
         const next = (i + 1) % 4;
         const midX = (corners[i].x + corners[next].x) / 2;
@@ -1338,7 +1394,6 @@
       displayCtx.putImageData(imgData, 0, 0);
     }
 
-    // Interactive Eraser & Highlighter
     function toggleEraserTool() {
       if (activeManualTool === "eraser") {
         activeManualTool = null;
@@ -1403,7 +1458,6 @@
       displayCtx.restore();
     }
 
-    // Signature Pad
     function openSignatureModal() {
       closeModal('pdfToolsModal');
       openModal("sigModal");
@@ -1460,7 +1514,6 @@
       sigImg.src = sigCanvas.toDataURL("image/png");
     }
 
-    // Anti-Theft Watermark
     function applyWatermarkToPage() {
       const text = document.getElementById("watermarkTextInput").value || "CONFIDENTIAL";
       const opacity = parseInt(document.getElementById("wmOpacity").value) / 100;
@@ -1479,7 +1532,6 @@
       showToast("Watermark Applied");
     }
 
-    // Batch Management & Page Sorting
     function savePageToBatch() {
       pages.push({
         dataUrl: displayCanvas.toDataURL("image/jpeg", 0.92),
@@ -1535,7 +1587,6 @@
       updatePagesSlider();
     }
 
-    // PDF Tools: Delete, Reorder, Rotate
     function deleteActivePage() {
       closeModal('pdfToolsModal');
       if (activeIndex === -1 || pages.length === 0) return alert("No page to delete.");
@@ -1604,7 +1655,6 @@
       }
     }
 
-    // PDF Export & Security
     function executePdfExport() {
       closeModal("pdfExportModal");
       if (pages.length === 0 && !displayCanvas.width) return alert("Scan or capture at least one page.");
@@ -1627,7 +1677,6 @@
         format: formatType === "a4" ? "a4" : [first.width, first.height]
       });
 
-      // Encrypt with password if specified
       if (password) {
         pdf.setEncryption({
           userPassword: password,
@@ -1649,7 +1698,6 @@
       pdf.save(`${title}.pdf`);
     }
 
-    // Image to Word (.doc)
     function exportToWord() {
       closeModal('converterModal');
       const text = document.getElementById("ocrText").innerText;
@@ -1668,7 +1716,6 @@
       showToast("Word (.doc) Exported!");
     }
 
-    // Image to Excel (.csv / .xlsx compatible)
     function exportToExcel() {
       closeModal('converterModal');
       const text = document.getElementById("ocrText").innerText;
@@ -1688,7 +1735,6 @@
       showToast("Excel (.csv) Exported!");
     }
 
-    // Smart Translation
     async function runSmartTranslation() {
       closeModal('converterModal');
       await runOcrCurrent();
@@ -1712,7 +1758,6 @@
       }
     }
 
-    // OCR Engine
     async function runOcrCurrent() {
       closeModal('converterModal');
       openModal("ocrModal");
