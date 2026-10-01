@@ -1,17 +1,14 @@
 {
   "name": "SAM-SCANNER Pro",
-  "short_name": "SAM Scan",
-  "start_url": "/SAM-SCANNER/",
+  "short_name": "SAM Scanner",
+  "description": "Scan documents, ID cards and books to PDF, with OCR.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#121212",
-  "theme_color": "#1e1e1e",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
   "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }
