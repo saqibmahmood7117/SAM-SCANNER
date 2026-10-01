@@ -1,1749 +1,316 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0d1b1e" />
-  <title>SAM-SCANNER Ultimate Pro</title>
-  
-  <link rel="manifest" href="manifest.json" />
-  <!-- jsPDF for multi-page PDF generation & encryption -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- Tesseract.js for client-side OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b1220"><title>SAM-SCANNER Pro</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--p:#10b981;--pd:#047857;--bg:#0b1220;--s:#172033;--s2:#263349;--t:#e2e8f0;--m:#94a3b8}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:-apple-system,"Segoe UI",Roboto,sans-serif;user-select:none}
+html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.scr.on{display:flex}
+.bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--s);min-height:52px}
+.bar h1{font-size:1rem;flex:1}.bar input{flex:1;min-width:0;background:none;border:0;color:#fff;font-size:.95rem;font-weight:600;outline:0}
+.logo{background:var(--p);padding:3px 7px;border-radius:5px;font-size:.7rem;font-weight:800}
+.b{background:var(--p);color:#fff;border:0;border-radius:22px;padding:10px 16px;font-weight:600;font-size:.85rem;display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.b.sec{background:var(--s2);color:var(--t)}
+.ib{background:none;border:0;color:#fff;font-size:1.3rem;width:42px;height:42px;display:grid;place-items:center;cursor:pointer}
+#list{flex:1;overflow:auto;padding:12px 12px 90px;display:grid;gap:10px;align-content:start}
+.card{display:flex;gap:12px;align-items:center;background:var(--s);border-radius:12px;padding:10px;cursor:pointer}
+.card img{width:52px;height:68px;object-fit:cover;border-radius:6px;background:#fff}
+.card div{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.card small,.empty{color:var(--m)}
+.empty{text-align:center;margin-top:30vh}
+.fab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px}
+.vp{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#05080f;min-height:0}
+.vp video{width:100%;height:100%;object-fit:contain}
+.vp canvas,.vp img{max-width:100%;max-height:100%}
+#ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.modes{flex:1;display:flex;gap:6px;overflow-x:auto}
+.modes span{padding:6px 12px;border-radius:16px;font-size:.78rem;font-weight:600;color:var(--m);white-space:nowrap;cursor:pointer}
+.modes span.on{background:var(--p);color:#fff}
+.deck{display:flex;justify-content:space-around;align-items:center;padding:12px;background:var(--s)}
+.shut{width:70px;height:70px;border-radius:50%;border:4px solid #fff;background:var(--p);background-clip:content-box;padding:5px;cursor:pointer}
+#cth{width:46px;height:60px;border-radius:6px;background:var(--s2) center/cover;position:relative}
+#cth i{position:absolute;top:-6px;right:-6px;background:var(--p);border-radius:10px;min-width:20px;text-align:center;font:700 .7rem sans-serif;padding:2px 5px}
+.nav{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#000a;border-radius:20px;padding:2px 8px;font-size:.8rem}
+.nav button{background:none;border:0;color:#fff;font-size:1.4rem;padding:2px 8px}
+#strip{display:flex;gap:8px;padding:8px 10px;overflow-x:auto;background:#0f172a;min-height:76px}
+#strip img{height:60px;width:46px;object-fit:cover;border:2px solid transparent;border-radius:4px;flex-shrink:0;background:#fff}
+#strip img.on{border-color:var(--p)}
+.sl{display:flex;gap:8px;align-items:center;padding:6px 12px;background:#101a2c;font-size:.8rem}
+.sl input{flex:1;accent-color:var(--p)}
+.row{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--s)}
+.fc,.tl{flex:0 0 auto;background:var(--s2);color:var(--t);border:2px solid transparent;border-radius:10px;padding:8px 12px;font-size:.75rem;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+.fc.on{border-color:var(--p);color:var(--p)}.tl span{font-size:1.15rem}
+#cc{touch-action:none}
+#mg{position:absolute;top:10px;left:10px;width:90px;height:90px;border-radius:50%;border:3px solid var(--p);display:none;background:#000}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--s);border-radius:16px 16px 0 0;padding:16px calc(16px) calc(16px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:10px;z-index:100;max-height:85%;overflow:auto;box-shadow:0 -8px 30px #000a}
+.sheet.on{display:flex}.sheet h3{display:flex;justify-content:space-between;font-size:1rem}
+.sheet select,.sheet input[type=text],.sheet input[type=password]{padding:10px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;width:100%;user-select:text}
+.sheet label{font-size:.82rem;color:var(--m);display:flex;flex-direction:column;gap:4px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#sg{background:#fff;border-radius:8px;width:100%;height:150px;touch-action:none}
+#ocrT{background:#0f172a;border-radius:8px;padding:10px;max-height:30vh;overflow:auto;white-space:pre-wrap;font-size:.85rem;user-select:text}
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--pd);padding:8px 16px;border-radius:20px;font-size:.82rem;font-weight:600;display:none;z-index:300;max-width:90%;text-align:center}
+</style></head><body>
 
-  <style>
-    :root {
-      --primary: #059669;
-      --primary-light: #10b981;
-      --primary-dark: #047857;
-      --bg-dark: #0a0f1d;
-      --surface: #1e293b;
-      --surface-light: #334155;
-      --accent: #06b6d4;
-      --ai-purple: #8b5cf6;
-      --danger: #ef4444;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
-    body { background: var(--bg-dark); color: #f8fafc; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-
-    /* Top Navigation Bar */
-    header {
-      height: 52px;
-      padding: 0 12px;
-      background: var(--surface);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #334155;
-      z-index: 20;
-    }
-    .brand { display: flex; align-items: center; gap: 6px; }
-    .brand-badge { background: var(--primary); padding: 3px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; }
-    .doc-name { background: transparent; border: none; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; width: 110px; }
-    
-    .nav-tabs { display: flex; gap: 4px; align-items: center; }
-    .nav-tab-btn {
-      background: var(--surface-light);
-      border: 1px solid #475569;
-      color: #cbd5e1;
-      padding: 5px 9px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .nav-tab-btn.highlight { background: var(--primary); color: #fff; border-color: var(--primary-light); }
-
-    /* Main Document Viewport */
-    .viewport {
-      flex: 1;
-      position: relative;
-      background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      width: 100%;
-    }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    canvas { max-width: 100%; max-height: 100%; object-fit: contain; touch-action: none; }
-
-    .guide-box {
-      position: absolute;
-      width: 86%;
-      height: 74%;
-      border: 2px dashed rgba(16, 185, 129, 0.7);
-      border-radius: 12px;
-      pointer-events: none;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
-    }
-
-    #magnifier {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      border: 3px solid var(--primary-light);
-      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-      background: #000;
-      pointer-events: none;
-      display: none;
-      overflow: hidden;
-      z-index: 50;
-    }
-
-    #statusToast {
-      position: absolute;
-      top: 14px;
-      background: rgba(16, 185, 129, 0.95);
-      color: #fff;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.82rem;
-      font-weight: 700;
-      display: none;
-      z-index: 60;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-
-    /* Start / Capture Landing Screen */
-    #cameraStartScreen {
-      position: absolute;
-      inset: 0;
-      background: #0a0f1d;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-      gap: 16px;
-      z-index: 5;
-    }
-    .start-icon {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: var(--surface);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.8rem;
-      border: 2px solid #334155;
-    }
-
-    /* Multi-page Thumbnails */
-    .pages-slider {
-      display: flex;
-      gap: 8px;
-      padding: 8px 12px;
-      overflow-x: auto;
-      background: #0f172a;
-      border-bottom: 1px solid #1e293b;
-      min-height: 72px;
-      align-items: center;
-    }
-    .thumb-card {
-      position: relative;
-      width: 48px;
-      height: 64px;
-      border-radius: 4px;
-      overflow: hidden;
-      border: 2px solid transparent;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .thumb-card.active { border-color: var(--primary-light); }
-    .thumb-card img { width: 100%; height: 100%; object-fit: cover; }
-    .thumb-num { position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.75); font-size: 9px; padding: 1px 4px; border-radius: 3px; }
-
-    /* Bottom Toolbar */
-    .bottom-bar {
-      background: var(--surface);
-      display: flex;
-      flex-direction: column;
-      border-top: 1px solid #334155;
-      z-index: 20;
-    }
-
-    /* Capture Modes */
-    .mode-slider {
-      display: flex;
-      justify-content: flex-start;
-      gap: 14px;
-      padding: 8px 12px 2px 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: #94a3b8;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
-    .mode-item { cursor: pointer; transition: color 0.2s; padding: 4px 6px; }
-    .mode-item.active { color: var(--primary-light); border-bottom: 2px solid var(--primary-light); }
-
-    /* Shutter Deck */
-    .shutter-deck {
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      padding: 10px 20px 18px 20px;
-    }
-    .shutter-btn {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: transparent;
-      border: 4px solid #fff;
-      padding: 4px;
-      cursor: pointer;
-    }
-    .shutter-inner { width: 100%; height: 100%; background: var(--primary); border-radius: 50%; }
-
-    .tool-icon-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      background: none;
-      border: none;
-      color: #cbd5e1;
-      font-size: 0.72rem;
-      cursor: pointer;
-    }
-    .tool-circle {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: var(--surface-light);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.15rem;
-    }
-
-    /* Filter Carousel */
-    .filter-tray {
-      display: flex;
-      gap: 10px;
-      padding: 10px 14px;
-      overflow-x: auto;
-      background: var(--surface);
-    }
-    .filter-chip {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      min-width: 58px;
-    }
-    .filter-thumb {
-      width: 48px;
-      height: 56px;
-      background: #0f172a;
-      border-radius: 6px;
-      border: 2px solid transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.65rem;
-      font-weight: 700;
-      color: #94a3b8;
-    }
-    .filter-chip.active .filter-thumb { border-color: var(--primary-light); color: #fff; background: var(--primary-dark); }
-    .filter-chip span { font-size: 0.7rem; color: #cbd5e1; }
-
-    /* Sliders */
-    .sliders-ribbon {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 6px 14px;
-      background: #141f32;
-      font-size: 0.75rem;
-      color: #94a3b8;
-    }
-    .sliders-ribbon input[type="range"] { flex: 1; accent-color: var(--primary-light); }
-
-    /* Premium Quick Tools */
-    .premium-tools {
-      display: flex;
-      justify-content: space-around;
-      padding: 8px 10px;
-      background: #152238;
-      border-top: 1px solid #24344d;
-    }
-    .premium-btn {
-      background: none;
-      border: none;
-      color: #cbd5e1;
-      font-size: 0.72rem;
-      font-weight: 600;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      cursor: pointer;
-    }
-    .premium-btn span { font-size: 1.1rem; }
-    .premium-btn.active-tool { color: var(--primary-light); }
-
-    /* Buttons */
-    .pill-btn {
-      padding: 8px 15px;
-      border-radius: 20px;
-      border: none;
-      font-weight: 600;
-      font-size: 0.8rem;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .pill-btn.primary { background: var(--primary); color: #fff; }
-    .pill-btn.secondary { background: var(--surface-light); color: #cbd5e1; }
-    .pill-btn.danger { background: var(--danger); color: #fff; }
-
-    /* Universal Modal Sheets */
-    .modal-sheet {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--surface);
-      border-top-left-radius: 16px;
-      border-top-right-radius: 16px;
-      padding: 16px;
-      display: none;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 -8px 24px rgba(0,0,0,0.6);
-      z-index: 100;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    .modal-head { display: flex; justify-content: space-between; align-items: center; }
-    .modal-head h3 { font-size: 0.95rem; font-weight: 700; }
-    .modal-close { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; }
-
-    .color-chip { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; cursor: pointer; }
-    .color-chip.selected { transform: scale(1.15); box-shadow: 0 0 8px #fff; }
-
-    /* Grid for PDF Tools & Converters */
-    .tool-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-      margin-top: 6px;
-    }
-    .tool-tile {
-      background: #0f172a;
-      border: 1px solid #334155;
-      padding: 12px 10px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      text-align: left;
-    }
-    .tool-tile:active { background: #1e293b; border-color: var(--primary); }
-    .tool-tile-icon { font-size: 1.3rem; }
-    .tool-tile-title { font-size: 0.8rem; font-weight: 700; color: #fff; }
-    .tool-tile-desc { font-size: 0.7rem; color: #94a3b8; }
-
-    #sigCanvas { background: #fff; border-radius: 8px; width: 100%; height: 160px; touch-action: none; cursor: crosshair; }
-  </style>
-</head>
-<body>
-
-  <!-- Top Navigation Bar -->
-  <header>
-    <div class="brand">
-      <div class="brand-badge">PRO</div>
-      <input type="text" class="doc-name" id="docTitle" value="SAM_Scan" />
-    </div>
-
-    <div class="nav-tabs">
-      <button class="nav-tab-btn" onclick="openModal('pdfToolsModal')">PDF Tools ▾</button>
-      <button class="nav-tab-btn" onclick="openModal('converterModal')">Convert ▾</button>
-      <button class="nav-tab-btn highlight" onclick="openModal('pdfExportModal')">Export PDF</button>
-    </div>
-  </header>
-
-  <!-- Multi-page Preview Strip with Reordering -->
-  <div class="pages-slider" id="pagesSlider" style="display: none;"></div>
-
-  <!-- Document Viewport -->
-  <div class="viewport" id="viewport">
-    <video id="camera" autoplay playsinline style="display: none;"></video>
-    <div class="guide-box" id="guideBox" style="display: none;"></div>
-
-    <canvas id="cropCanvas" style="display: none;"></canvas>
-    <canvas id="displayCanvas" style="display: none;"></canvas>
-
-    <!-- Corner Magnifier Loupe -->
-    <div id="magnifier">
-      <canvas id="magnifierCanvas" width="90" height="90"></canvas>
-    </div>
-
-    <!-- Status Toast Notification -->
-    <div id="statusToast">Processing Document...</div>
-
-    <!-- Start / Capture Screen -->
-    <div id="cameraStartScreen">
-      <div class="start-icon">📄</div>
-      <div>
-        <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">SAM-SCANNER Pro</h2>
-        <p style="font-size: 0.85rem; color: #94a3b8;">Document & PDF Tools Suite</p>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 260px;">
-        <label class="pill-btn primary" style="justify-content: center; cursor: pointer; padding: 12px;">
-          📷 Take Photo
-          <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handleIncomingFiles(event)" />
-        </label>
-        <label class="pill-btn secondary" style="justify-content: center; cursor: pointer; padding: 12px;">
-          🖼️ Import Files / Gallery
-          <input type="file" accept="image/*" multiple style="display: none;" onchange="handleIncomingFiles(event)" />
-        </label>
-        <button class="pill-btn secondary" style="justify-content: center; padding: 8px;" onclick="tryStartWebcam()">
-          Use Live Viewfinder
-        </button>
-      </div>
-    </div>
+<div id="home" class="scr on">
+  <div class="bar"><b class="logo">PRO</b><h1>SAM-SCANNER</h1></div>
+  <div id="list"></div>
+  <div class="fab">
+    <label class="b sec">🖼️ Import<input type="file" accept="image/*" multiple hidden onchange="imp(this)"></label>
+    <button class="b" onclick="startScan()">📷 Scan</button>
   </div>
+</div>
 
-  <!-- MODAL 1: PDF Tools Suite (From Image 1) -->
-  <div class="modal-sheet" id="pdfToolsModal">
-    <div class="modal-head">
-      <h3>PDF Tools</h3>
-      <button class="modal-close" onclick="closeModal('pdfToolsModal')">✕</button>
-    </div>
-    <div class="tool-grid">
-      <div class="tool-tile" onclick="triggerMergeFiles()">
-        <span class="tool-tile-icon">📑</span>
-        <div><div class="tool-tile-title">Merge PDF</div><div class="tool-tile-desc">Append pages</div></div>
-      </div>
-      <div class="tool-tile" onclick="openSplitDialog()">
-        <span class="tool-tile-icon">✂️</span>
-        <div><div class="tool-tile-title">Split PDF</div><div class="tool-tile-desc">Extract range</div></div>
-      </div>
-      <div class="tool-tile" onclick="deleteActivePage()">
-        <span class="tool-tile-icon">🗑️</span>
-        <div><div class="tool-tile-title">Delete Pages</div><div class="tool-tile-desc">Remove page</div></div>
-      </div>
-      <div class="tool-tile" onclick="openSortPagesDialog()">
-        <span class="tool-tile-icon">⇅</span>
-        <div><div class="tool-tile-title">Sort Pages</div><div class="tool-tile-desc">Reorder batch</div></div>
-      </div>
-      <div class="tool-tile" onclick="rotateActivePage90()">
-        <span class="tool-tile-icon">↻</span>
-        <div><div class="tool-tile-title">Rotate PDF</div><div class="tool-tile-desc">Rotate 90°</div></div>
-      </div>
-      <div class="tool-tile" onclick="openSignatureModal()">
-        <span class="tool-tile-icon">✍️</span>
-        <div><div class="tool-tile-title">PDF Signature</div><div class="tool-tile-desc">Sign document</div></div>
-      </div>
-      <div class="tool-tile" onclick="openModal('watermarkModal')">
-        <span class="tool-tile-icon">🛡️</span>
-        <div><div class="tool-tile-title">PDF Watermark</div><div class="tool-tile-desc">Anti-theft stamp</div></div>
-      </div>
-      <div class="tool-tile" onclick="openModal('pdfExportModal')">
-        <span class="tool-tile-icon">🔒</span>
-        <div><div class="tool-tile-title">PDF Password</div><div class="tool-tile-desc">Protect file</div></div>
-      </div>
-    </div>
+<div id="cam" class="scr">
+  <div class="bar"><button class="ib" onclick="closeCam()">✕</button>
+    <div class="modes" id="modes"><span class="on" data-m="doc">Document</span><span data-m="idcard">ID Card</span><span data-m="book">Book</span></div>
+    <button class="ib" onclick="torch()">🔦</button></div>
+  <div class="vp"><video id="vid" autoplay playsinline muted></video><canvas id="ov"></canvas><div id="fl"></div></div>
+  <div class="deck">
+    <div id="cth" onclick="edit()"></div>
+    <button class="shut" onclick="shoot()"></button>
+    <label class="ib">🖼️<input type="file" accept="image/*" multiple hidden onchange="imp(this)"></label>
   </div>
+</div>
 
-  <!-- MODAL 2: Converters & Smart Features (From Image 2) -->
-  <div class="modal-sheet" id="converterModal">
-    <div class="modal-head">
-      <h3>AI Converters & Features</h3>
-      <button class="modal-close" onclick="closeModal('converterModal')">✕</button>
-    </div>
-    <div class="tool-grid">
-      <div class="tool-tile" onclick="runSmartTranslation()">
-        <span class="tool-tile-icon">🌐</span>
-        <div><div class="tool-tile-title">Smart Translation</div><div class="tool-tile-desc">Translate document</div></div>
-      </div>
-      <div class="tool-tile" onclick="exportToWord()">
-        <span class="tool-tile-icon">📝</span>
-        <div><div class="tool-tile-title">Image to Word 🔥</div><div class="tool-tile-desc">Export .doc</div></div>
-      </div>
-      <div class="tool-tile" onclick="exportToExcel()">
-        <span class="tool-tile-icon">📊</span>
-        <div><div class="tool-tile-title">Image to Excel</div><div class="tool-tile-desc">Export .csv / .xlsx</div></div>
-      </div>
-      <div class="tool-tile" onclick="runOcrCurrent()">
-        <span class="tool-tile-icon">🔤</span>
-        <div><div class="tool-tile-title">Image to Text</div><div class="tool-tile-desc">Extract text</div></div>
-      </div>
-      <div class="tool-tile" onclick="setMode('book')">
-        <span class="tool-tile-icon">📖</span>
-        <div><div class="tool-tile-title">Scan Books</div><div class="tool-tile-desc">Split 2 pages</div></div>
-      </div>
-      <div class="tool-tile" onclick="setMode('idphoto')">
-        <span class="tool-tile-icon">👤</span>
-        <div><div class="tool-tile-title">ID Photo Maker</div><div class="tool-tile-desc">Passport 35x45mm</div></div>
-      </div>
-      <div class="tool-tile" onclick="setMode('jigsaw')">
-        <span class="tool-tile-icon">🧩</span>
-        <div><div class="tool-tile-title">Jigsaw Mode</div><div class="tool-tile-desc">Splice onto A4</div></div>
-      </div>
-      <div class="tool-tile" onclick="setMode('idcard')">
-        <span class="tool-tile-icon">🪪</span>
-        <div><div class="tool-tile-title">Scan ID Card</div><div class="tool-tile-desc">2-in-1 Front & Back</div></div>
-      </div>
-    </div>
+<div id="crop" class="scr">
+  <div class="bar"><button class="b sec" onclick="edit()">Cancel</button><button class="b sec" onclick="cFull()">Full</button><button class="b sec" onclick="cAuto()">Auto</button><button class="b" onclick="cDone()">✓ Done</button></div>
+  <div class="vp"><canvas id="cc"></canvas><canvas id="mg" width="100" height="100"></canvas></div>
+</div>
+
+<div id="edit" class="scr">
+  <div class="bar"><button class="ib" onclick="home()">←</button><input id="title" onchange="rename()"><button class="b" onclick="openM('exp')">PDF ⤓</button></div>
+  <div class="vp"><img id="pv"><div class="nav"><button onclick="go(-1)">‹</button><span id="pn"></span><button onclick="go(1)">›</button></div></div>
+  <div id="strip"></div>
+  <div class="sl">☀️<input id="br" type="range" min="-50" max="50" value="0" oninput="adj()" onchange="adj()">◐<input id="ctr" type="range" min="-50" max="50" value="0" oninput="adj()" onchange="adj()"></div>
+  <div class="row">
+    <button class="fc" data-f="magic" onclick="setF('magic')">Magic color</button>
+    <button class="fc" data-f="orig" onclick="setF('orig')">Original</button>
+    <button class="fc" data-f="light" onclick="setF('light')">Lighten</button>
+    <button class="fc" data-f="bw" onclick="setF('bw')">B&amp;W</button>
+    <button class="fc" data-f="gray" onclick="setF('gray')">Grayscale</button>
   </div>
-
-  <!-- MODAL 3: Signature Pad -->
-  <div class="modal-sheet" id="sigModal">
-    <div class="modal-head">
-      <h3>Electronic Signature</h3>
-      <button class="modal-close" onclick="closeModal('sigModal')">✕</button>
-    </div>
-    <div style="display: flex; gap: 12px; align-items: center;">
-      <span style="font-size: 0.8rem; color:#cbd5e1;">Pen Ink:</span>
-      <div class="color-chip selected" style="background:#000000;" onclick="setSigColor('#000000', this)"></div>
-      <div class="color-chip" style="background:#1d4ed8;" onclick="setSigColor('#1d4ed8', this)"></div>
-      <div class="color-chip" style="background:#b91c1c;" onclick="setSigColor('#b91c1c', this)"></div>
-    </div>
-    <canvas id="sigCanvas"></canvas>
-    <div style="display: flex; gap: 8px; justify-content: space-between;">
-      <button class="pill-btn secondary" onclick="clearSignature()">Clear</button>
-      <button class="pill-btn primary" onclick="stampSignatureOnPage()">Stamp Signature</button>
-    </div>
+  <div class="row">
+    <button class="tl" onclick="recrop()"><span>✂️</span>Crop</button>
+    <button class="tl" onclick="rot()"><span>↻</span>Rotate</button>
+    <button class="tl" onclick="openM('sig')"><span>✍️</span>Sign</button>
+    <button class="tl" onclick="openM('wm')"><span>🛡️</span>Watermark</button>
+    <button class="tl" onclick="ocr()"><span>🔤</span>Text</button>
+    <button class="tl" onclick="mv(-1)"><span>◀</span>Move</button>
+    <button class="tl" onclick="mv(1)"><span>▶</span>Move</button>
+    <button class="tl" onclick="openCam()"><span>➕</span>Add</button>
+    <button class="tl" onclick="delPage()"><span>🗑️</span>Delete</button>
   </div>
-
-  <!-- MODAL 4: Anti-Theft Watermark -->
-  <div class="modal-sheet" id="watermarkModal">
-    <div class="modal-head">
-      <h3>Add Anti-Theft Watermark</h3>
-      <button class="modal-close" onclick="closeModal('watermarkModal')">✕</button>
-    </div>
-    <input type="text" id="watermarkTextInput" value="CONFIDENTIAL" style="padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 0.9rem;" />
-    <div style="display: flex; gap: 10px; align-items: center; font-size: 0.8rem;">
-      <span>Opacity:</span>
-      <input type="range" id="wmOpacity" min="10" max="80" value="25" style="flex: 1;" />
-    </div>
-    <button class="pill-btn primary" onclick="applyWatermarkToPage()">Apply Watermark</button>
-  </div>
-
-  <!-- MODAL 5: PDF Export & Security -->
-  <div class="modal-sheet" id="pdfExportModal">
-    <div class="modal-head">
-      <h3>Export PDF</h3>
-      <button class="modal-close" onclick="closeModal('pdfExportModal')">✕</button>
-    </div>
-    <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.85rem;">
-      <label>Page Format:
-        <select id="pdfFormatSelect" style="padding: 8px; width: 100%; margin-top: 4px; border-radius: 6px; background:#0f172a; color:#fff; border:1px solid #334155;">
-          <option value="a4">Standard A4 (Print ready)</option>
-          <option value="fit">Fit to Scanned Image</option>
-        </select>
-      </label>
-      <label>Compression & Quality:
-        <select id="pdfQualitySelect" style="padding: 8px; width: 100%; margin-top: 4px; border-radius: 6px; background:#0f172a; color:#fff; border:1px solid #334155;">
-          <option value="0.95">HD / Maximum Quality</option>
-          <option value="0.80" selected>Medium / Balanced (Recommended)</option>
-          <option value="0.60">Low / Small Size (Email/WhatsApp)</option>
-        </select>
-      </label>
-      <label>Optional Password Protection:
-        <input type="password" id="pdfPasswordInput" placeholder="Leave empty for no password" style="padding: 8px; width: 100%; margin-top: 4px; border-radius: 6px; background:#0f172a; color:#fff; border:1px solid #334155;" />
-      </label>
-      <div style="font-size: 0.75rem; color: #10b981;">✓ 100% Watermark-Free & Ad-Free</div>
-    </div>
-    <button class="pill-btn primary" onclick="executePdfExport()">Download PDF</button>
-  </div>
-
-  <!-- MODAL 6: Smart Translation & OCR Sheet -->
-  <div class="modal-sheet" id="ocrModal">
-    <div class="modal-head">
-      <h3 id="ocrModalTitle">Extracted Text</h3>
-      <button class="modal-close" onclick="closeModal('ocrModal')">✕</button>
-    </div>
-    <div id="ocrText" style="background: #0f172a; color: #e2e8f0; border-radius: 6px; padding: 10px; font-size: 0.85rem; max-height: 160px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #334155;">Recognizing text...</div>
-    
-    <div style="display: flex; gap: 8px; align-items: center; font-size: 0.8rem;">
-      <span>Translate to:</span>
-      <select id="targetLangSelect" onchange="translateOcrText(this.value)" style="padding: 4px 8px; border-radius: 6px; background:#0f172a; color:#fff; border:1px solid #334155;">
-        <option value="">Select language...</option>
-        <option value="ur">Urdu (اردو)</option>
-        <option value="ar">Arabic (العربية)</option>
-        <option value="es">Spanish</option>
-        <option value="fr">French</option>
-        <option value="de">German</option>
-        <option value="zh-CN">Chinese</option>
-      </select>
-    </div>
-
-    <div style="display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
-      <button class="pill-btn secondary" onclick="copyOcrText()">Copy</button>
-      <button class="pill-btn secondary" onclick="exportToWord()">Export Word</button>
-      <button class="pill-btn secondary" onclick="exportToExcel()">Export Excel</button>
-      <button class="pill-btn primary" onclick="downloadOcrTxt()">Download .txt</button>
-    </div>
-  </div>
-
-  <!-- MODAL 7: ID Photo Background Color Chooser -->
-  <div class="modal-sheet" id="idPhotoModal">
-    <div class="modal-head">
-      <h3>ID Photo Background</h3>
-      <button class="modal-close" onclick="closeModal('idPhotoModal')">✕</button>
-    </div>
-    <p style="font-size:0.8rem; color:#94a3b8;">Choose standard passport/visa photo background color:</p>
-    <div style="display: flex; gap: 14px; justify-content: center; padding: 10px 0;">
-      <div class="color-chip" style="background:#ffffff; border-color:#94a3b8;" onclick="setIdPhotoBg('#ffffff')"></div>
-      <div class="color-chip" style="background:#2563eb;" onclick="setIdPhotoBg('#2563eb')"></div>
-      <div class="color-chip" style="background:#dc2626;" onclick="setIdPhotoBg('#dc2626')"></div>
-      <div class="color-chip" style="background:#94a3b8;" onclick="setIdPhotoBg('#94a3b8')"></div>
-    </div>
-  </div>
-
-  <!-- Bottom Toolbar -->
-  <div class="bottom-bar">
-    
-    <!-- State 1: Shutter Deck -->
-    <div id="cameraDeck">
-      <div class="mode-slider">
-        <span class="mode-item active" onclick="setMode('doc')">Scan Doc</span>
-        <span class="mode-item" onclick="setMode('idcard')">ID Card 2-in-1</span>
-        <span class="mode-item" onclick="setMode('book')">Scan Books</span>
-        <span class="mode-item" onclick="setMode('idphoto')">ID Photo</span>
-        <span class="mode-item" onclick="setMode('jigsaw')">Jigsaw A4</span>
-      </div>
-
-      <div class="shutter-deck">
-        <label class="tool-icon-btn">
-          <div class="tool-circle">🖼️</div>
-          <span>Import</span>
-          <input type="file" accept="image/*" multiple style="display: none;" onchange="handleIncomingFiles(event)" />
-        </label>
-
-        <!-- Big Shutter Trigger -->
-        <label class="shutter-btn" style="display: flex; align-items: center; justify-content: center; cursor: pointer;">
-          <div class="shutter-inner"></div>
-          <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handleIncomingFiles(event)" />
-        </label>
-
-        <button class="tool-icon-btn" onclick="tryStartWebcam()">
-          <div class="tool-circle">📹</div>
-          <span>Live Cam</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- State 2: 8-Point Crop Deck -->
-    <div id="cropDeck" style="display: none;">
-      <div style="display: flex; justify-content: space-between; padding: 12px 14px; gap: 6px;">
-        <button class="pill-btn secondary" onclick="selectAllCrop()">Full Page</button>
-        <button class="pill-btn secondary" onclick="rotate90()">Rotate ↻</button>
-        <button class="pill-btn primary" onclick="applyPerspectiveCrop()">Dewarp & Crop ➔</button>
-      </div>
-    </div>
-
-    <!-- State 3: Filter & Document Customization Deck -->
-    <div id="filterDeck" style="display: none;">
-      
-      <!-- Premium Tools Bar -->
-      <div class="premium-tools">
-        <button class="premium-btn" onclick="openSignatureModal()">
-          <span>✍️</span> Sign
-        </button>
-        <button class="premium-btn" id="eraserBtn" onclick="toggleEraserTool()">
-          <span>🧹</span> Eraser
-        </button>
-        <button class="premium-btn" id="highlighterBtn" onclick="toggleHighlightTool()">
-          <span>🖍️</span> Highlight
-        </button>
-        <button class="premium-btn" onclick="openModal('watermarkModal')">
-          <span>🛡️</span> Watermark
-        </button>
-        <button class="premium-btn" onclick="reopenCropScreen()">
-          <span>📐</span> Re-Crop
-        </button>
-        <button class="premium-btn" onclick="runOcrCurrent()">
-          <span>📄</span> OCR
-        </button>
-      </div>
-
-      <!-- Brightness & Contrast Sliders -->
-      <div class="sliders-ribbon">
-        <span>Light:</span>
-        <input type="range" id="brightnessSlider" min="-50" max="50" value="0" oninput="renderFinalAdjustedImage()" />
-        <span>Contrast:</span>
-        <input type="range" id="contrastSlider" min="-50" max="50" value="0" oninput="renderFinalAdjustedImage()" />
-      </div>
-
-      <!-- Filter Presets -->
-      <div class="filter-tray">
-        <div class="filter-chip active" onclick="applyPresetFilter('magic')">
-          <div class="filter-thumb" style="background:#047857; color:#fff;">MAGIC</div>
-          <span>Magic Color</span>
-        </div>
-        <div class="filter-chip" onclick="applyPresetFilter('bw')">
-          <div class="filter-thumb">B&W</div>
-          <span>B&W Clean</span>
-        </div>
-        <div class="filter-chip" onclick="applyPresetFilter('gray')">
-          <div class="filter-thumb">GRAY</div>
-          <span>Grayscale</span>
-        </div>
-        <div class="filter-chip" onclick="applyPresetFilter('orig')">
-          <div class="filter-thumb">ORIG</div>
-          <span>Original</span>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; padding: 10px 16px 16px 16px;">
-        <button class="pill-btn secondary" onclick="retakeOrNew()">+ Add Page</button>
-        <button class="pill-btn primary" onclick="savePageToBatch()">✓ Save Page</button>
-      </div>
-    </div>
-
-  </div>
-
-  <script>
-    const video = document.getElementById("camera");
-    const cropCanvas = document.getElementById("cropCanvas");
-    const displayCanvas = document.getElementById("displayCanvas");
-    const startScreen = document.getElementById("cameraStartScreen");
-    const magnifier = document.getElementById("magnifier");
-    const magCanvas = document.getElementById("magnifierCanvas");
-    const sigCanvas = document.getElementById("sigCanvas");
-
-    const cropCtx = cropCanvas.getContext("2d");
-    const displayCtx = displayCanvas.getContext("2d");
-    const magCtx = magCanvas.getContext("2d");
-    const sigCtx = sigCanvas.getContext("2d");
-
-    let currentStream = null;
-    let scanMode = "doc"; // 'doc', 'idcard', 'book', 'idphoto', 'jigsaw'
-    let rawImage = new Image();
-    let unenhancedDewarpedImage = null;
-    let baseFilteredImageData = null;
-    let pages = [];
-    let activeIndex = -1;
-    let currentFilter = "magic";
-
-    // 8-point crop system
-    let corners = [];
-    let activeCornerIdx = -1;
-
-    // Signature & drawing state
-    let isDrawingSig = false;
-    let currentSigColor = "#000000";
-    let activeManualTool = null;
-    let isPaintingManual = false;
-
-    // ID Card 2-in-1 State
-    let idCardStep = 0;
-    let idFrontImage = null;
-
-    function hideAllViewportOverlays() {
-      startScreen.style.display = "none";
-      video.style.display = "none";
-      document.getElementById("guideBox").style.display = "none";
-    }
-
-    function setMode(mode) {
-      scanMode = mode;
-      document.querySelectorAll(".mode-item").forEach(el => el.classList.remove("active"));
-      if (event && event.target && event.target.classList.contains("mode-item")) {
-        event.target.classList.add("active");
-      }
-      closeModal('converterModal');
-
-      if (mode === "idcard") {
-        idCardStep = 0;
-        showToast("ID Card: Capture FRONT side first");
-      } else if (mode === "book") {
-        showToast("Scan Books: Capture open 2-page spread");
-      } else if (mode === "idphoto") {
-        showToast("ID Photo: Take a portrait photo");
-      } else if (mode === "jigsaw") {
-        spliceJigsawOntoA4();
-      }
-    }
-
-    async function tryStartWebcam() {
-      try {
-        currentStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
-        });
-        hideAllViewportOverlays();
-        video.srcObject = currentStream;
-        video.style.display = "block";
-        document.getElementById("guideBox").style.display = "block";
-      } catch (err) {
-        showToast("Direct Camera Triggered");
-        const tempInput = document.createElement("input");
-        tempInput.type = "file";
-        tempInput.accept = "image/*";
-        tempInput.capture = "environment";
-        tempInput.onchange = handleIncomingFiles;
-        tempInput.click();
-      }
-    }
-
-    function handleIncomingFiles(e) {
-      const files = Array.from(e.target.files);
-      if (!files.length) return;
-
-      if (files.length === 1) {
-        const reader = new FileReader();
-        reader.onload = (evt) => processIncomingImage(evt.target.result);
-        reader.readAsDataURL(files[0]);
-      } else {
-        files.forEach((f) => {
-          const r = new FileReader();
-          r.onload = (evt) => {
-            const img = new Image();
-            img.onload = () => {
-              pages.push({ dataUrl: evt.target.result, width: img.width, height: img.height });
-              updatePagesSlider();
-            };
-            img.src = evt.target.result;
-          };
-          r.readAsDataURL(f);
-        });
-        showToast(`Imported ${files.length} images`);
-      }
-    }
-
-    function processIncomingImage(src) {
-      if (scanMode === "idcard") {
-        if (idCardStep === 0) {
-          idFrontImage = new Image();
-          idFrontImage.onload = () => {
-            idCardStep = 1;
-            showToast("Front Saved! Now capture BACK side");
-            retakeOrNew();
-          };
-          idFrontImage.src = src;
-          return;
-        } else if (idCardStep === 1) {
-          const idBack = new Image();
-          idBack.onload = () => {
-            idCardStep = 0;
-            createIdCardComposite(idFrontImage, idBack);
-          };
-          idBack.src = src;
-          return;
-        }
-      } else if (scanMode === "book") {
-        splitBookSpread(src);
-        return;
-      } else if (scanMode === "idphoto") {
-        createIdPhoto(src);
-        return;
-      }
-      loadSingleImage(src);
-    }
-
-    // 1. ID Card 2-in-1 Composite
-    function createIdCardComposite(frontImg, backImg) {
-      showToast("Generating ID Card copy...");
-      const a4W = 1240, a4H = 1754;
-      displayCanvas.width = a4W;
-      displayCanvas.height = a4H;
-
-      displayCtx.fillStyle = "#ffffff";
-      displayCtx.fillRect(0, 0, a4W, a4H);
-
-      displayCtx.fillStyle = "#64748b";
-      displayCtx.font = "bold 26px sans-serif";
-      displayCtx.fillText("IDENTIFICATION CARD (2-IN-1 SCAN)", 100, 100);
-
-      const cardW = 900, cardH = 560;
-      displayCtx.strokeRect(170, 160, cardW, cardH);
-      displayCtx.drawImage(frontImg, 170, 160, cardW, cardH);
-      displayCtx.fillText("FRONT SIDE", 170, 750);
-
-      displayCtx.strokeRect(170, 820, cardW, cardH);
-      displayCtx.drawImage(backImg, 170, 820, cardW, cardH);
-      displayCtx.fillText("BACK SIDE", 170, 1410);
-
-      saveCanvasAsProcessedPage();
-    }
-
-    // 2. Scan Books (Dual-Page Split)
-    function splitBookSpread(src) {
-      showToast("Splitting Left & Right Pages...");
-      const img = new Image();
-      img.onload = () => {
-        const halfW = Math.floor(img.width / 2);
-        const h = img.height;
-
-        // Left Page
-        const leftCvs = document.createElement("canvas");
-        leftCvs.width = halfW; leftCvs.height = h;
-        leftCvs.getContext("2d").drawImage(img, 0, 0, halfW, h, 0, 0, halfW, h);
-        pages.push({ dataUrl: leftCvs.toDataURL("image/jpeg", 0.92), width: halfW, height: h });
-
-        // Right Page
-        const rightCvs = document.createElement("canvas");
-        rightCvs.width = halfW; rightCvs.height = h;
-        rightCvs.getContext("2d").drawImage(img, halfW, 0, halfW, h, 0, 0, halfW, h);
-        pages.push({ dataUrl: rightCvs.toDataURL("image/jpeg", 0.92), width: halfW, height: h });
-
-        activeIndex = pages.length - 1;
-        updatePagesSlider();
-        viewBatchPage(activeIndex);
-        showToast("Book Split into 2 Pages!");
-      };
-      img.src = src;
-    }
-
-    // 3. ID Photo Maker (Standard 35x45mm)
-    function createIdPhoto(src) {
-      showToast("Cropping ID Portrait...");
-      const img = new Image();
-      img.onload = () => {
-        const w = 420;
-        const h = 540; // 35x45 ratio
-        displayCanvas.width = w;
-        displayCanvas.height = h;
-
-        displayCtx.fillStyle = "#ffffff";
-        displayCtx.fillRect(0, 0, w, h);
-        displayCtx.drawImage(img, 0, 0, w, h);
-
-        saveCanvasAsProcessedPage();
-        openModal("idPhotoModal");
-      };
-      img.src = src;
-    }
-
-    function setIdPhotoBg(color) {
-      displayCtx.fillStyle = color;
-      displayCtx.fillRect(0, 0, displayCanvas.width, displayCanvas.height);
-      displayCtx.drawImage(unenhancedDewarpedImage, 0, 0);
-      closeModal("idPhotoModal");
-      showToast("Background Updated");
-    }
-
-    // 4. Jigsaw Mode (Splice multiple pages onto A4 sheet)
-    function spliceJigsawOntoA4() {
-      if (pages.length < 2) return alert("Scan at least 2 pages to use Jigsaw mode.");
-      showToast("Splicing pages onto single A4 sheet...");
-      
-      const a4W = 1240, a4H = 1754;
-      displayCanvas.width = a4W;
-      displayCanvas.height = a4H;
-      displayCtx.fillStyle = "#ffffff";
-      displayCtx.fillRect(0, 0, a4W, a4H);
-
-      const count = Math.min(4, pages.length);
-      const halfW = a4W / 2 - 30;
-      const halfH = a4H / 2 - 30;
-      const coords = [
-        {x: 20, y: 20}, {x: a4W/2 + 10, y: 20},
-        {x: 20, y: a4H/2 + 10}, {x: a4W/2 + 10, y: a4H/2 + 10}
-      ];
-
-      countLoaded = 0;
-      for (let i = 0; i < count; i++) {
-        const pImg = new Image();
-        pImg.onload = () => {
-          displayCtx.drawImage(pImg, coords[i].x, coords[i].y, halfW, halfH);
-          displayCtx.strokeRect(coords[i].x, coords[i].y, halfW, halfH);
-          countLoaded++;
-          if (countLoaded === count) {
-            saveCanvasAsProcessedPage();
-            showToast("Jigsaw Sheet Generated!");
-          }
-        };
-        pImg.src = pages[i].dataUrl;
-      }
-    }
-
-    function saveCanvasAsProcessedPage() {
-      unenhancedDewarpedImage = document.createElement("canvas");
-      unenhancedDewarpedImage.width = displayCanvas.width;
-      unenhancedDewarpedImage.height = displayCanvas.height;
-      unenhancedDewarpedImage.getContext("2d").drawImage(displayCanvas, 0, 0);
-
-      hideAllViewportOverlays();
-      cropCanvas.style.display = "none";
-      displayCanvas.style.display = "block";
-      document.getElementById("cameraDeck").style.display = "none";
-      document.getElementById("cropDeck").style.display = "none";
-      document.getElementById("filterDeck").style.display = "block";
-      applyPresetFilter("magic");
-    }
-
-    function loadSingleImage(src) {
-      rawImage.onload = () => {
-        if (currentStream) currentStream.getTracks().forEach(t => t.stop());
-        hideAllViewportOverlays();
-        initCropScreen();
-      };
-      rawImage.src = src;
-    }
-
-    // Distortion-Proof Corner Detection
-    function autoDetectDocumentCorners(img) {
-      const w = img.width, h = img.height;
-      const safeDefault = [
-        { x: w * 0.04, y: h * 0.04 },
-        { x: w * 0.96, y: h * 0.04 },
-        { x: w * 0.96, y: h * 0.96 },
-        { x: w * 0.04, y: h * 0.96 }
-      ];
-
-      try {
-        const maxDim = 320;
-        const scale = Math.min(maxDim / w, maxDim / h, 1);
-        const sw = Math.floor(w * scale), sh = Math.floor(h * scale);
-
-        const cvs = document.createElement("canvas");
-        cvs.width = sw; cvs.height = sh;
-        const ctx = cvs.getContext("2d");
-        ctx.drawImage(img, 0, 0, sw, sh);
-
-        const d = ctx.getImageData(0, 0, sw, sh).data;
-        const gray = new Uint8Array(sw * sh);
-        let totalLum = 0;
-        for (let i = 0; i < d.length; i += 4) {
-          const lum = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-          gray[i / 4] = lum;
-          totalLum += lum;
-        }
-        const avgLum = totalLum / (sw * sh);
-
-        let borderLum = 0, borderCount = 0;
-        for (let x = 0; x < sw; x++) { borderLum += gray[x] + gray[(sh - 1) * sw + x]; borderCount += 2; }
-        for (let y = 0; y < sh; y++) { borderLum += gray[y * sw] + gray[y * sw + sw - 1]; borderCount += 2; }
-        const bgAvg = borderLum / borderCount;
-
-        if (Math.abs(avgLum - bgAvg) < 18) return safeDefault;
-
-        const isDocLighter = avgLum >= bgAvg;
-        const threshold = (avgLum + bgAvg) / 2;
-
-        let minSum = Infinity, maxSum = -Infinity;
-        let minDiff = Infinity, maxDiff = -Infinity;
-        let tl = { x: sw * 0.04, y: sh * 0.04 };
-        let tr = { x: sw * 0.96, y: sh * 0.04 };
-        let br = { x: sw * 0.96, y: sh * 0.96 };
-        let bl = { x: sw * 0.04, y: sh * 0.96 };
-        let count = 0;
-
-        for (let y = 0; y < sh; y++) {
-          for (let x = 0; x < sw; x++) {
-            const val = gray[y * sw + x];
-            if (isDocLighter ? val > threshold : val < threshold) {
-              count++;
-              const s = x + y, diff = x - y;
-              if (s < minSum) { minSum = s; tl = { x, y }; }
-              if (s > maxSum) { maxSum = s; br = { x, y }; }
-              if (diff > maxDiff) { maxDiff = diff; tr = { x, y }; }
-              if (diff < minDiff) { minDiff = diff; bl = { x, y }; }
-            }
-          }
-        }
-
-        if (count > (sw * sh * 0.25) && count < (sw * sh * 0.92)) {
-          const detected = [
-            { x: Math.max(0, tl.x / scale), y: Math.max(0, tl.y / scale) },
-            { x: Math.min(w, tr.x / scale), y: Math.max(0, tr.y / scale) },
-            { x: Math.min(w, br.x / scale), y: Math.min(h, br.y / scale) },
-            { x: Math.max(0, bl.x / scale), y: Math.min(h, bl.y / scale) }
-          ];
-          const topW = Math.hypot(detected[1].x - detected[0].x, detected[1].y - detected[0].y);
-          const botW = Math.hypot(detected[2].x - detected[3].x, detected[2].y - detected[3].y);
-          if (Math.abs(topW - botW) / Math.max(topW, botW) < 0.35) return detected;
-        }
-      } catch (err) {}
-      return safeDefault;
-    }
-
-    function showToast(msg) {
-      const toast = document.getElementById("statusToast");
-      toast.innerText = msg;
-      toast.style.display = "block";
-      setTimeout(() => { toast.style.display = "none"; }, 2500);
-    }
-
-    function initCropScreen() {
-      hideAllViewportOverlays();
-      cropCanvas.width = rawImage.width;
-      cropCanvas.height = rawImage.height;
-      corners = autoDetectDocumentCorners(rawImage);
-
-      cropCanvas.style.display = "block";
-      displayCanvas.style.display = "none";
-      document.getElementById("cameraDeck").style.display = "none";
-      document.getElementById("cropDeck").style.display = "block";
-      document.getElementById("filterDeck").style.display = "none";
-      renderCropOverlay();
-    }
-
-    function reopenCropScreen() { initCropScreen(); }
-
-    function renderCropOverlay() {
-      cropCtx.drawImage(rawImage, 0, 0);
-
-      cropCtx.beginPath();
-      cropCtx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 4; i++) cropCtx.lineTo(corners[i].x, corners[i].y);
-      cropCtx.closePath();
-      cropCtx.strokeStyle = "#10b981";
-      cropCtx.lineWidth = 6;
-      cropCtx.stroke();
-      cropCtx.fillStyle = "rgba(16, 185, 129, 0.18)";
-      cropCtx.fill();
-
-      corners.forEach(c => {
-        cropCtx.beginPath();
-        cropCtx.arc(c.x, c.y, 24, 0, 2 * Math.PI);
-        cropCtx.fillStyle = "#ffffff";
-        cropCtx.fill();
-        cropCtx.lineWidth = 5;
-        cropCtx.strokeStyle = "#047857";
-        cropCtx.stroke();
-      });
-
-      for (let i = 0; i < 4; i++) {
-        const next = (i + 1) % 4;
-        const midX = (corners[i].x + corners[next].x) / 2;
-        const midY = (corners[i].y + corners[next].y) / 2;
-        cropCtx.beginPath();
-        cropCtx.arc(midX, midY, 14, 0, 2 * Math.PI);
-        cropCtx.fillStyle = "#10b981";
-        cropCtx.fill();
-        cropCtx.lineWidth = 3;
-        cropCtx.strokeStyle = "#ffffff";
-        cropCtx.stroke();
-      }
-    }
-
-    function getPointerPos(e) {
-      const rect = cropCanvas.getBoundingClientRect();
-      const scaleX = cropCanvas.width / rect.width;
-      const scaleY = cropCanvas.height / rect.height;
-      const cx = e.touches ? e.touches[0].clientX : e.clientX;
-      const cy = e.touches ? e.touches[0].clientY : e.clientY;
-      return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
-    }
-
-    cropCanvas.addEventListener("pointerdown", (e) => {
-      const p = getPointerPos(e);
-      activeCornerIdx = corners.findIndex(c => Math.hypot(c.x - p.x, c.y - p.y) < 70);
-      if (activeCornerIdx !== -1) {
-        magnifier.style.display = "block";
-        updateMagnifier(corners[activeCornerIdx]);
-      }
-    });
-
-    window.addEventListener("pointermove", (e) => {
-      if (activeCornerIdx === -1) return;
-      e.preventDefault();
-      const p = getPointerPos(e);
-      corners[activeCornerIdx].x = Math.max(0, Math.min(cropCanvas.width, p.x));
-      corners[activeCornerIdx].y = Math.max(0, Math.min(cropCanvas.height, p.y));
-      renderCropOverlay();
-      updateMagnifier(corners[activeCornerIdx]);
-    });
-
-    window.addEventListener("pointerup", () => {
-      activeCornerIdx = -1;
-      magnifier.style.display = "none";
-    });
-
-    function updateMagnifier(c) {
-      magCtx.clearRect(0, 0, 90, 90);
-      magCtx.drawImage(rawImage, c.x - 25, c.y - 25, 50, 50, 0, 0, 90, 90);
-      magCtx.strokeStyle = "#10b981";
-      magCtx.lineWidth = 2;
-      magCtx.beginPath();
-      magCtx.moveTo(45, 25); magCtx.lineTo(45, 65);
-      magCtx.moveTo(25, 45); magCtx.lineTo(65, 45);
-      magCtx.stroke();
-    }
-
-    function selectAllCrop() {
-      const w = cropCanvas.width, h = cropCanvas.height;
-      corners = [{x:0, y:0}, {x:w, y:0}, {x:w, y:h}, {x:0, y:h}];
-      renderCropOverlay();
-    }
-
-    function rotate90() {
-      const temp = document.createElement("canvas");
-      temp.width = rawImage.height;
-      temp.height = rawImage.width;
-      const tCtx = temp.getContext("2d");
-      tCtx.translate(temp.width / 2, temp.height / 2);
-      tCtx.rotate(Math.PI / 2);
-      tCtx.drawImage(rawImage, -rawImage.width / 2, -rawImage.height / 2);
-      loadSingleImage(temp.toDataURL("image/jpeg", 0.95));
-    }
-
-    // Perspective Transformation
-    function applyPerspectiveCrop() {
-      showToast("Dewarping & Enhancing...");
-
-      const p0 = (corners && corners[0]) || { x: 0, y: 0 };
-      const p1 = (corners && corners[1]) || { x: rawImage.width, y: 0 };
-      const p2 = (corners && corners[2]) || { x: rawImage.width, y: rawImage.height };
-      const p3 = (corners && corners[3]) || { x: 0, y: rawImage.height };
-
-      const widthTop = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 100;
-      const widthBottom = Math.hypot(p2.x - p3.x, p2.y - p3.y) || 100;
-      const heightLeft = Math.hypot(p3.x - p0.x, p3.y - p0.y) || 100;
-      const heightRight = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 100;
-
-      const targetWidth = Math.max(100, Math.round(Math.max(widthTop, widthBottom)));
-      const targetHeight = Math.max(100, Math.round(Math.max(heightLeft, heightRight)));
-
-      displayCanvas.width = targetWidth;
-      displayCanvas.height = targetHeight;
-
-      const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
-      const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
-      const det = dx1 * dy2 - dx2 * dy1;
-
-      let g = 0, h = 0;
-      if (Math.abs(det) > 1e-5) {
-        g = (dx3 * dy2 - dx2 * dy3) / det;
-        h = (dx1 * dy3 - dx3 * dy1) / det;
-      }
-      const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + h * p3.x, c = p0.x;
-      const d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + h * p3.y, f = p0.y;
-
-      function mapSource(u, v) {
-        const denom = g * u + h * v + 1;
-        return { x: (a * u + b * v + c) / denom, y: (d * u + e * v + f) / denom };
-      }
-
-      displayCtx.clearRect(0, 0, targetWidth, targetHeight);
-      const N = 16;
-      for (let i = 0; i < N; i++) {
-        for (let j = 0; j < N; j++) {
-          const u0 = i / N, v0 = j / N, u1 = (i + 1) / N, v1 = (j + 1) / N;
-          const x0 = u0 * targetWidth, y0 = v0 * targetHeight;
-          const x1 = u1 * targetWidth, y1 = v1 * targetHeight;
-
-          const s00 = mapSource(u0, v0), s10 = mapSource(u1, v0);
-          const s01 = mapSource(u0, v1), s11 = mapSource(u1, v1);
-
-          drawTriWarp(displayCtx, rawImage, s00.x, s00.y, s10.x, s10.y, s01.x, s01.y, x0, y0, x1, y0, x0, y1);
-          drawTriWarp(displayCtx, rawImage, s10.x, s10.y, s11.x, s11.y, s01.x, s01.y, x1, y0, x1, y1, x0, y1);
-        }
-      }
-
-      unenhancedDewarpedImage = document.createElement("canvas");
-      unenhancedDewarpedImage.width = targetWidth;
-      unenhancedDewarpedImage.height = targetHeight;
-      unenhancedDewarpedImage.getContext("2d").drawImage(displayCanvas, 0, 0);
-
-      hideAllViewportOverlays();
-      cropCanvas.style.display = "none";
-      displayCanvas.style.display = "block";
-      document.getElementById("cropDeck").style.display = "none";
-      document.getElementById("filterDeck").style.display = "block";
-
-      applyPresetFilter("magic");
-    }
-
-    function drawTriWarp(ctx, img, u0, v0, u1, v1, u2, v2, x0, y0, x1, y0_2, x2, y2) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x0, y0); ctx.lineTo(x1, y0_2); ctx.lineTo(x2, y2);
-      ctx.closePath();
-      ctx.clip();
-
-      const delta = u0 * (v1 - v2) - v0 * (u1 - u2) + (u1 * v2 - u2 * v1);
-      if (Math.abs(delta) > 1e-6) {
-        const ma = (x0 * (v1 - v2) + x1 * (v2 - v0) + x2 * (v0 - v1)) / delta;
-        const mc = (x0 * (u2 - u1) + x1 * (u0 - u2) + x2 * (u1 - u0)) / delta;
-        const me = (x0 * (u1 * v2 - u2 * v1) + x1 * (u2 * v0 - u0 * v2) + x2 * (u0 * v1 - u1 * v0)) / delta;
-
-        const mb = (y0 * (v1 - v2) + y0_2 * (v2 - v0) + y2 * (v0 - v1)) / delta;
-        const md = (y0 * (u2 - u1) + y0_2 * (u0 - u2) + y2 * (u1 - u0)) / delta;
-        const mf = (y0 * (u1 * v2 - u2 * v1) + y0_2 * (u2 * v0 - u0 * v2) + y2 * (u0 * v1 - u1 * v0)) / delta;
-
-        ctx.transform(ma, mb, mc, md, me, mf);
-        ctx.drawImage(img, 0, 0);
-      }
-      ctx.restore();
-    }
-
-    // CamScanner Magic Color & Enhancements
-    function applyPresetFilter(type) {
-      currentFilter = type;
-      const w = displayCanvas.width, h = displayCanvas.height;
-      displayCtx.drawImage(unenhancedDewarpedImage, 0, 0);
-      const imgData = displayCtx.getImageData(0, 0, w, h);
-      const d = imgData.data;
-
-      if (type === "magic") {
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i], g = d[i+1], b = d[i+2];
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-          if (lum > 145) {
-            d[i] = Math.min(255, r * 1.28 + 20);
-            d[i+1] = Math.min(255, g * 1.28 + 20);
-            d[i+2] = Math.min(255, b * 1.28 + 20);
-          } else {
-            d[i] = r * 0.75;
-            d[i+1] = g * 0.75;
-            d[i+2] = b * 0.75;
-          }
-        }
-      } else {
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i], g = d[i+1], b = d[i+2];
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-          if (type === "gray") {
-            d[i] = d[i+1] = d[i+2] = lum;
-          } else if (type === "bw") {
-            const val = lum > 130 ? 255 : 0;
-            d[i] = d[i+1] = d[i+2] = val;
-          }
-        }
-      }
-
-      displayCtx.putImageData(imgData, 0, 0);
-      baseFilteredImageData = displayCtx.getImageData(0, 0, w, h);
-
-      document.querySelectorAll(".filter-chip").forEach(el => el.classList.remove("active"));
-      if (event && event.currentTarget) event.currentTarget.classList.add("active");
-      renderFinalAdjustedImage();
-    }
-
-    function renderFinalAdjustedImage() {
-      if (!baseFilteredImageData) return;
-      displayCtx.putImageData(baseFilteredImageData, 0, 0);
-      const imgData = displayCtx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
-      const d = imgData.data;
-
-      const brightness = parseInt(document.getElementById("brightnessSlider").value);
-      const contrast = parseInt(document.getElementById("contrastSlider").value);
-      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-
-      for (let i = 0; i < d.length; i += 4) {
-        d[i] = factor * (d[i] - 128) + 128 + brightness;
-        d[i+1] = factor * (d[i+1] - 128) + 128 + brightness;
-        d[i+2] = factor * (d[i+2] - 128) + 128 + brightness;
-      }
-      displayCtx.putImageData(imgData, 0, 0);
-    }
-
-    // Interactive Eraser & Highlighter
-    function toggleEraserTool() {
-      if (activeManualTool === "eraser") {
-        activeManualTool = null;
-        document.getElementById("eraserBtn").classList.remove("active-tool");
-      } else {
-        activeManualTool = "eraser";
-        document.getElementById("eraserBtn").classList.add("active-tool");
-        document.getElementById("highlighterBtn").classList.remove("active-tool");
-        showToast("Eraser: Drag to white out");
-      }
-    }
-
-    function toggleHighlightTool() {
-      if (activeManualTool === "highlighter") {
-        activeManualTool = null;
-        document.getElementById("highlighterBtn").classList.remove("active-tool");
-      } else {
-        activeManualTool = "highlighter";
-        document.getElementById("highlighterBtn").classList.add("active-tool");
-        document.getElementById("eraserBtn").classList.remove("active-tool");
-        showToast("Highlighter: Drag over text");
-      }
-    }
-
-    displayCanvas.addEventListener("pointerdown", (e) => {
-      if (!activeManualTool) return;
-      isPaintingManual = true;
-      paintOnDocument(e);
-    });
-
-    window.addEventListener("pointermove", (e) => {
-      if (!isPaintingManual || !activeManualTool) return;
-      paintOnDocument(e);
-    });
-
-    window.addEventListener("pointerup", () => {
-      if (isPaintingManual) {
-        isPaintingManual = false;
-        baseFilteredImageData = displayCtx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
-      }
-    });
-
-    function paintOnDocument(e) {
-      const rect = displayCanvas.getBoundingClientRect();
-      const scaleX = displayCanvas.width / rect.width;
-      const scaleY = displayCanvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
-
-      displayCtx.save();
-      if (activeManualTool === "eraser") {
-        displayCtx.fillStyle = "#ffffff";
-        displayCtx.beginPath();
-        displayCtx.arc(x, y, 22, 0, 2 * Math.PI);
-        displayCtx.fill();
-      } else if (activeManualTool === "highlighter") {
-        displayCtx.fillStyle = "rgba(250, 204, 21, 0.35)";
-        displayCtx.beginPath();
-        displayCtx.arc(x, y, 18, 0, 2 * Math.PI);
-        displayCtx.fill();
-      }
-      displayCtx.restore();
-    }
-
-    // Signature Pad
-    function openSignatureModal() {
-      closeModal('pdfToolsModal');
-      openModal("sigModal");
-      sigCanvas.width = sigCanvas.offsetWidth;
-      sigCanvas.height = 160;
-      clearSignature();
-    }
-
-    function setSigColor(color, el) {
-      currentSigColor = color;
-      document.querySelectorAll(".color-chip").forEach(c => c.classList.remove("selected"));
-      el.classList.add("selected");
-    }
-
-    function clearSignature() {
-      sigCtx.fillStyle = "#ffffff";
-      sigCtx.fillRect(0, 0, sigCanvas.width, sigCanvas.height);
-    }
-
-    sigCanvas.addEventListener("pointerdown", (e) => {
-      isDrawingSig = true;
-      sigCtx.beginPath();
-      const rect = sigCanvas.getBoundingClientRect();
-      sigCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-      sigCtx.strokeStyle = currentSigColor;
-      sigCtx.lineWidth = 3;
-      sigCtx.lineCap = "round";
-    });
-
-    window.addEventListener("pointermove", (e) => {
-      if (!isDrawingSig) return;
-      const rect = sigCanvas.getBoundingClientRect();
-      sigCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-      sigCtx.stroke();
-    });
-
-    window.addEventListener("pointerup", () => { isDrawingSig = false; });
-
-    function stampSignatureOnPage() {
-      const sigImg = new Image();
-      sigImg.onload = () => {
-        const sigWidth = displayCanvas.width * 0.35;
-        const sigHeight = sigWidth * (sigCanvas.height / sigCanvas.width);
-        const posX = displayCanvas.width - sigWidth - 30;
-        const posY = displayCanvas.height - sigHeight - 30;
-
-        displayCtx.globalAlpha = 0.92;
-        displayCtx.drawImage(sigImg, posX, posY, sigWidth, sigHeight);
-        displayCtx.globalAlpha = 1.0;
-        baseFilteredImageData = displayCtx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
-        closeModal("sigModal");
-        showToast("Signature Added");
-      };
-      sigImg.src = sigCanvas.toDataURL("image/png");
-    }
-
-    // Anti-Theft Watermark
-    function applyWatermarkToPage() {
-      const text = document.getElementById("watermarkTextInput").value || "CONFIDENTIAL";
-      const opacity = parseInt(document.getElementById("wmOpacity").value) / 100;
-
-      displayCtx.save();
-      displayCtx.translate(displayCanvas.width / 2, displayCanvas.height / 2);
-      displayCtx.rotate(-Math.PI / 4);
-      displayCtx.font = `bold ${Math.floor(displayCanvas.width / 10)}px sans-serif`;
-      displayCtx.fillStyle = `rgba(220, 38, 38, ${opacity})`;
-      displayCtx.textAlign = "center";
-      displayCtx.fillText(text, 0, 0);
-      displayCtx.restore();
-
-      baseFilteredImageData = displayCtx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
-      closeModal("watermarkModal");
-      showToast("Watermark Applied");
-    }
-
-    // Batch Management & Page Sorting
-    function savePageToBatch() {
-      pages.push({
-        dataUrl: displayCanvas.toDataURL("image/jpeg", 0.92),
-        width: displayCanvas.width,
-        height: displayCanvas.height
-      });
-      activeIndex = pages.length - 1;
-      updatePagesSlider();
-      showToast("Page Added to Batch");
-    }
-
-    function retakeOrNew() {
-      hideAllViewportOverlays();
-      displayCanvas.style.display = "none";
-      cropCanvas.style.display = "none";
-      document.getElementById("cropDeck").style.display = "none";
-      document.getElementById("filterDeck").style.display = "none";
-      document.getElementById("cameraDeck").style.display = "block";
-      startScreen.style.display = "flex";
-    }
-
-    function updatePagesSlider() {
-      const slider = document.getElementById("pagesSlider");
-      if (pages.length > 0) slider.style.display = "flex";
-      slider.innerHTML = "";
-
-      pages.forEach((p, idx) => {
-        const box = document.createElement("div");
-        box.className = `thumb-card ${idx === activeIndex ? "active" : ""}`;
-        box.innerHTML = `<img src="${p.dataUrl}" /><span class="thumb-num">${idx + 1}</span>`;
-        box.onclick = () => viewBatchPage(idx);
-        slider.appendChild(box);
-      });
-    }
-
-    function viewBatchPage(idx) {
-      activeIndex = idx;
-      const page = pages[idx];
-      const img = new Image();
-      img.onload = () => {
-        displayCanvas.width = page.width;
-        displayCanvas.height = page.height;
-        displayCtx.drawImage(img, 0, 0);
-        hideAllViewportOverlays();
-        cropCanvas.style.display = "none";
-        displayCanvas.style.display = "block";
-        document.getElementById("cameraDeck").style.display = "none";
-        document.getElementById("cropDeck").style.display = "none";
-        document.getElementById("filterDeck").style.display = "block";
-        baseFilteredImageData = displayCtx.getImageData(0, 0, page.width, page.height);
-      };
-      img.src = page.dataUrl;
-      updatePagesSlider();
-    }
-
-    // PDF Tools: Delete, Reorder, Rotate
-    function deleteActivePage() {
-      closeModal('pdfToolsModal');
-      if (activeIndex === -1 || pages.length === 0) return alert("No page to delete.");
-      pages.splice(activeIndex, 1);
-      if (pages.length === 0) {
-        document.getElementById("pagesSlider").style.display = "none";
-        retakeOrNew();
-      } else {
-        activeIndex = Math.max(0, activeIndex - 1);
-        viewBatchPage(activeIndex);
-      }
-      showToast("Page Deleted");
-    }
-
-    function openSortPagesDialog() {
-      closeModal('pdfToolsModal');
-      if (pages.length < 2) return alert("Add at least 2 pages to reorder.");
-      const direction = confirm("Click OK to move this page LEFT, or Cancel to move it RIGHT.") ? -1 : 1;
-      const newIdx = activeIndex + direction;
-      if (newIdx >= 0 && newIdx < pages.length) {
-        const temp = pages[activeIndex];
-        pages[activeIndex] = pages[newIdx];
-        pages[newIdx] = temp;
-        viewBatchPage(newIdx);
-        showToast("Pages Reordered");
-      }
-    }
-
-    function rotateActivePage90() {
-      closeModal('pdfToolsModal');
-      const temp = document.createElement("canvas");
-      temp.width = displayCanvas.height;
-      temp.height = displayCanvas.width;
-      const tCtx = temp.getContext("2d");
-      tCtx.translate(temp.width / 2, temp.height / 2);
-      tCtx.rotate(Math.PI / 2);
-      tCtx.drawImage(displayCanvas, -displayCanvas.width / 2, -displayCanvas.height / 2);
-
-      displayCanvas.width = temp.width;
-      displayCanvas.height = temp.height;
-      displayCtx.drawImage(temp, 0, 0);
-      baseFilteredImageData = displayCtx.getImageData(0, 0, temp.width, temp.height);
-      showToast("Rotated 90°");
-    }
-
-    function triggerMergeFiles() {
-      closeModal('pdfToolsModal');
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.multiple = true;
-      input.onchange = handleIncomingFiles;
-      input.click();
-    }
-
-    function openSplitDialog() {
-      closeModal('pdfToolsModal');
-      const from = prompt("Split PDF: Enter Start Page Number (1 to " + pages.length + "):", "1");
-      const to = prompt("Enter End Page Number:", pages.length);
-      if (from && to) {
-        const p1 = Math.max(1, parseInt(from)) - 1;
-        const p2 = Math.min(pages.length, parseInt(to));
-        pages = pages.slice(p1, p2);
-        viewBatchPage(0);
-        showToast("PDF Split Completed");
-      }
-    }
-
-    // PDF Export & Security
-    function executePdfExport() {
-      closeModal("pdfExportModal");
-      if (pages.length === 0 && !displayCanvas.width) return alert("Scan or capture at least one page.");
-      
-      const { jsPDF } = window.jspdf;
-      const formatType = document.getElementById("pdfFormatSelect").value;
-      const quality = parseFloat(document.getElementById("pdfQualitySelect").value);
-      const password = document.getElementById("pdfPasswordInput").value;
-
-      const exportList = pages.length > 0 ? pages : [{
-        dataUrl: displayCanvas.toDataURL("image/jpeg", quality),
-        width: displayCanvas.width,
-        height: displayCanvas.height
-      }];
-
-      const first = exportList[0];
-      const pdf = new jsPDF({
-        orientation: first.width > first.height ? "l" : "p",
-        unit: "px",
-        format: formatType === "a4" ? "a4" : [first.width, first.height]
-      });
-
-      // Encrypt with password if specified
-      if (password) {
-        pdf.setEncryption({
-          userPassword: password,
-          ownerPassword: password,
-          userPermissions: ["print", "modify", "copy", "annot-forms"]
-        });
-      }
-
-      exportList.forEach((p, i) => {
-        if (i > 0) {
-          pdf.addPage(formatType === "a4" ? "a4" : [p.width, p.height], p.width > p.height ? "l" : "p");
-        }
-        const imgW = formatType === "a4" ? pdf.internal.pageSize.getWidth() : p.width;
-        const imgH = formatType === "a4" ? pdf.internal.pageSize.getHeight() : p.height;
-        pdf.addImage(p.dataUrl, "JPEG", 0, 0, imgW, imgH, undefined, "FAST");
-      });
-
-      const title = document.getElementById("docTitle").value || "SAM_Document";
-      pdf.save(`${title}.pdf`);
-    }
-
-    // Image to Word (.doc)
-    function exportToWord() {
-      closeModal('converterModal');
-      const text = document.getElementById("ocrText").innerText;
-      if (!text || text === "Recognizing text...") {
-        return runOcrCurrent().then(() => exportToWord());
-      }
-      const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'></head><body>";
-      const footer = "</body></html>";
-      const sourceHTML = header + "<div style='font-family:Calibri;font-size:12pt;line-height:1.5;white-space:pre-wrap;'>" + text + "</div>" + footer;
-      
-      const blob = new Blob(['\ufeff' + sourceHTML], { type: 'application/msword' });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${document.getElementById("docTitle").value || "scan"}.doc`;
-      a.click();
-      showToast("Word (.doc) Exported!");
-    }
-
-    // Image to Excel (.csv / .xlsx compatible)
-    function exportToExcel() {
-      closeModal('converterModal');
-      const text = document.getElementById("ocrText").innerText;
-      if (!text || text === "Recognizing text...") {
-        return runOcrCurrent().then(() => exportToExcel());
-      }
-      const lines = text.split('\n');
-      const rows = lines.map(line => {
-        return line.trim().split(/\s{2,}|\t|,/).map(cell => `"${cell.replace(/"/g, '""')}"`).join(",");
-      }).join("\n");
-
-      const blob = new Blob(['\ufeff' + rows], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${document.getElementById("docTitle").value || "scan"}.csv`;
-      a.click();
-      showToast("Excel (.csv) Exported!");
-    }
-
-    // Smart Translation
-    async function runSmartTranslation() {
-      closeModal('converterModal');
-      await runOcrCurrent();
-      document.getElementById("ocrModalTitle").innerText = "Smart Translation";
-      showToast("Ready to translate text");
-    }
-
-    async function translateOcrText(lang) {
-      if (!lang) return;
-      const text = document.getElementById("ocrText").innerText;
-      showToast("Translating text...");
-      try {
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${lang}&dt=t&q=${encodeURIComponent(text)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        const translated = data[0].map(item => item[0]).join('');
-        document.getElementById("ocrText").innerText = translated;
-        showToast("Translation Complete!");
-      } catch (err) {
-        showToast("Translation error");
-      }
-    }
-
-    // OCR Engine
-    async function runOcrCurrent() {
-      closeModal('converterModal');
-      openModal("ocrModal");
-      const textDiv = document.getElementById("ocrText");
-      textDiv.innerText = "Extracting text with OCR...";
-
-      try {
-        const worker = await Tesseract.createWorker("eng");
-        const res = await worker.recognize(displayCanvas);
-        textDiv.innerText = res.data.text || "No text detected.";
-        await worker.terminate();
-      } catch (err) {
-        textDiv.innerText = "OCR Error: " + err.message;
-      }
-    }
-
-    function copyOcrText() {
-      navigator.clipboard.writeText(document.getElementById("ocrText").innerText);
-      showToast("Text copied to clipboard!");
-    }
-
-    function downloadOcrTxt() {
-      const blob = new Blob([document.getElementById("ocrText").innerText], { type: "text/plain" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${document.getElementById("docTitle").value || "scan"}_ocr.txt`;
-      a.click();
-    }
-
-    function openModal(id) { document.getElementById(id).style.display = "flex"; }
-    function closeModal(id) { document.getElementById(id).style.display = "none"; }
-  </script>
-</body>
-</html>
+</div>
+
+<div class="sheet" id="exp"><h3>Save as PDF <button class="ib" onclick="closeM('exp')">✕</button></h3>
+  <label>Page size<select id="fmt"><option value="a4">A4 (print ready)</option><option value="fit">Fit to page</option></select></label>
+  <label>Quality<select id="qual"><option value="0.95">High</option><option value="0.8" selected>Balanced</option><option value="0.6">Small file</option></select></label>
+  <label>Password (optional)<input type="password" id="pw" placeholder="Leave empty for none"></label>
+  <div class="acts"><button class="b sec" onclick="pdf(true)">Share</button><button class="b" onclick="pdf(false)">Save PDF</button></div></div>
+
+<div class="sheet" id="sig"><h3>Signature <button class="ib" onclick="closeM('sig')">✕</button></h3>
+  <div style="display:flex;gap:12px;align-items:center"><span style="font-size:.8rem">Ink</span>
+    <button class="ib" style="font-size:1.6rem" onclick="sc='#000'">⚫</button><button class="ib" style="font-size:1.6rem" onclick="sc='#1d4ed8'">🔵</button><button class="ib" style="font-size:1.6rem" onclick="sc='#b91c1c'">🔴</button></div>
+  <canvas id="sg"></canvas>
+  <div class="acts"><button class="b sec" onclick="sx.clearRect(0,0,sg.width,sg.height)">Clear</button><button class="b" onclick="stampSig()">Add signature</button></div></div>
+
+<div class="sheet" id="wm"><h3>Watermark <button class="ib" onclick="closeM('wm')">✕</button></h3>
+  <input type="text" id="wmT" value="CONFIDENTIAL"><label>Opacity<input type="range" id="wmO" min="10" max="80" value="25"></label>
+  <div class="acts"><button class="b" onclick="stampWm()">Apply to this page</button></div></div>
+
+<div class="sheet" id="ocr"><h3>Text from page <button class="ib" onclick="closeM('ocr')">✕</button></h3>
+  <div id="ocrT"></div>
+  <label>Language<select id="lang" onchange="ocr()"><option value="eng">English</option><option value="urd">Urdu</option><option value="ara">Arabic</option></select></label>
+  <label>Translate to<select onchange="tr(this.value)"><option value="">Select…</option><option value="ur">Urdu</option><option value="ar">Arabic</option><option value="en">English</option><option value="fr">French</option><option value="es">Spanish</option></select></label>
+  <div class="acts"><button class="b sec" onclick="exp('copy')">Copy</button><button class="b sec" onclick="exp('doc')">Word</button><button class="b sec" onclick="exp('csv')">Excel</button><button class="b" onclick="exp('txt')">.txt</button></div></div>
+
+<div id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id),MAXW=2000;
+let doc=null,idx=0,mode='doc',stream=null,timer=null,idFront=null,crop=null,tOn=false;
+const cur=()=>doc.pages[idx];
+const load=u=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=u});
+const box=(c,m=0)=>{const w=c.width,h=c.height,a=w*m,b=h*m;return[{x:a,y:b},{x:w-a,y:b},{x:w-a,y:h-b},{x:a,y:h-b}]};
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2200)}
+function show(id){document.querySelectorAll('.scr').forEach(e=>e.classList.toggle('on',e.id===id))}
+function openM(id){$(id).classList.add('on');if(id==='sig'){sg.width=sg.offsetWidth;sg.height=150}}
+const closeM=id=>$(id).classList.remove('on');
+
+/* ---------- Library (IndexedDB) ---------- */
+const db=new Promise((ok,no)=>{const r=indexedDB.open('sam-scanner',1);r.onupgradeneeded=()=>r.result.createObjectStore('d',{keyPath:'id'});r.onsuccess=()=>ok(r.result);r.onerror=no});
+const tx=async(m,f)=>{const d=await db;return new Promise((ok,no)=>{const t=d.transaction('d',m),q=f(t.objectStore('d'));t.oncomplete=()=>ok(q&&q.result);t.onerror=no})};
+const dbAll=()=>tx('readonly',s=>s.getAll()),dbPut=d=>tx('readwrite',s=>s.put(d)),dbDel=id=>tx('readwrite',s=>s.delete(id));
+const save=()=>{doc.ts=Date.now();return dbPut(doc)};
+const newDoc=()=>({id:Date.now(),name:'Scan '+new Date().toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}),ts:Date.now(),pages:[]});
+
+async function home(){stopCam();doc=null;show('home');const l=(await dbAll()).sort((a,b)=>b.ts-a.ts),L=$('list');
+  L.innerHTML=l.length?'':'<p class="empty">No scans yet.<br>Tap Scan to capture your first document.</p>';
+  l.forEach(d=>{const e=document.createElement('div');e.className='card';
+    e.innerHTML='<img><div><b></b><small></small></div><button class="ib">🗑️</button>';
+    e.querySelector('img').src=d.pages[0]?d.pages[0].out:'';e.querySelector('b').textContent=d.name;
+    e.querySelector('small').textContent=d.pages.length+' page(s) · '+new Date(d.ts).toLocaleDateString();
+    e.onclick=()=>{doc=d;idx=0;edit()};
+    e.querySelector('button').onclick=async ev=>{ev.stopPropagation();if(confirm('Delete "'+d.name+'"?')){await dbDel(d.id);home()}};
+    L.append(e)})}
+
+/* ---------- Camera ---------- */
+function startScan(){doc=null;idFront=null;openCam()}
+async function openCam(){if(!doc)doc=newDoc();show('cam');updCount();
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
+    $('vid').srcObject=stream;timer=setInterval(liveDetect,500)}
+  catch(e){toast('Camera blocked — use Import (🖼️) to pick a photo')}}
+function stopCam(){clearInterval(timer);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;tOn=false}
+function closeCam(){stopCam();doc&&doc.pages.length?edit():home()}
+async function torch(){try{tOn=!tOn;await stream.getVideoTracks()[0].applyConstraints({advanced:[{torch:tOn}]})}catch{toast('Torch not supported')}}
+$('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;idFront=null;[...$('modes').children].forEach(s=>s.classList.toggle('on',s===e.target));
+  toast({doc:'Document',idcard:'ID card: capture FRONT, then BACK',book:'Book: capture the open 2-page spread'}[m])};
+function updCount(){const n=doc?doc.pages.length:0,t=$('cth');t.style.backgroundImage=n?`url(${doc.pages[n-1].out})`:'none';t.innerHTML=n?`<i>${n}</i>`:''}
+
+const dc=document.createElement('canvas');
+function detect(src,w,h){try{const s=Math.min(1,320/Math.max(w,h)),sw=Math.round(w*s),sh=Math.round(h*s);dc.width=sw;dc.height=sh;
+  const x=dc.getContext('2d',{willReadFrequently:true});x.drawImage(src,0,0,sw,sh);const d=x.getImageData(0,0,sw,sh).data,g=new Uint8Array(sw*sh);let t=0;
+  for(let i=0;i<g.length;i++){g[i]=.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];t+=g[i]}
+  const avg=t/g.length;let bl=0,bc=0;
+  for(let a=0;a<sw;a++){bl+=g[a]+g[(sh-1)*sw+a];bc+=2}for(let b=0;b<sh;b++){bl+=g[b*sw]+g[b*sw+sw-1];bc+=2}
+  const bg=bl/bc;if(Math.abs(avg-bg)<18)return null;const light=avg>=bg,th=(avg+bg)/2;
+  let mn=1e9,mx=-1e9,dn=1e9,dx=-1e9,tl,tr,br,bL,n=0;
+  for(let y=0;y<sh;y++)for(let x2=0;x2<sw;x2++){const v=g[y*sw+x2];if(light?v>th:v<th){n++;const a=x2+y,b=x2-y;
+    if(a<mn){mn=a;tl={x:x2,y}}if(a>mx){mx=a;br={x:x2,y}}if(b>dx){dx=b;tr={x:x2,y}}if(b<dn){dn=b;bL={x:x2,y}}}}
+  if(n<sw*sh*.25||n>sw*sh*.92)return null;
+  const q=[tl,tr,br,bL].map(p=>({x:p.x/s,y:p.y/s})),H=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),A=H(q[0],q[1]),B=H(q[3],q[2]);
+  return Math.abs(A-B)/Math.max(A,B)<.35?q:null}catch{return null}}
+function liveDetect(){const v=$('vid');if(!v.videoWidth)return;const c=$('ov'),W=c.width=v.clientWidth,H=c.height=v.clientHeight,x=c.getContext('2d'),
+  s=Math.min(W/v.videoWidth,H/v.videoHeight),ox=(W-v.videoWidth*s)/2,oy=(H-v.videoHeight*s)/2,p=detect(v,v.videoWidth,v.videoHeight);
+  x.clearRect(0,0,W,H);if(!p)return;x.beginPath();p.forEach((q,i)=>x[i?'lineTo':'moveTo'](ox+q.x*s,oy+q.y*s));x.closePath();
+  x.fillStyle='rgba(16,185,129,.22)';x.fill();x.strokeStyle='#10b981';x.lineWidth=3;x.stroke()}
+
+function fit(src,w,h){const s=Math.min(1,MAXW/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c}
+async function shoot(){const v=$('vid');if(!stream||!v.videoWidth)return toast('Camera not ready — use Import');
+  $('fl').style.opacity=.8;setTimeout(()=>$('fl').style.opacity=0,120);await handle(fit(v,v.videoWidth,v.videoHeight))}
+async function imp(i){const fs=[...i.files];i.value='';if(!fs.length)return;toast('Processing…');if(!doc)doc=newDoc();
+  for(const f of fs){const b=await createImageBitmap(f);await handle(fit(b,b.width,b.height))}
+  $('cam').classList.contains('on')?updCount():doc.pages.length&&edit()}
+
+async function handle(c){
+  if(mode==='book'){const h=c.width>>1;for(const x of[0,h]){const p=document.createElement('canvas');p.width=h;p.height=c.height;p.getContext('2d').drawImage(c,x,0,h,c.height,0,0,h,c.height);await addPage(p)}return}
+  if(mode==='idcard'){const p=warp(c,detect(c,c.width,c.height)||box(c,.03));
+    if(!idFront){idFront=p;return toast('Front saved — now capture the BACK')}
+    const f=idFront,A=document.createElement('canvas');idFront=null;A.width=1240;A.height=1754;const x=A.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,1240,1754);
+    [f,p].forEach((im,i)=>{const s=Math.min(900/im.width,560/im.height),w=im.width*s,h=im.height*s;x.drawImage(im,170+(900-w)/2,150+i*820+(560-h)/2,w,h)});
+    return addPage(A,true)}
+  await addPage(c)}
+async function addPage(raw,full){const pts=full?box(raw):(detect(raw,raw.width,raw.height)||box(raw,.03));
+  const p={raw:raw.toDataURL('image/jpeg',.85),pts,filter:'magic',br:0,ct:0,src:warp(raw,pts).toDataURL('image/jpeg',.92)};
+  await render(p);doc.pages.push(p);idx=doc.pages.length-1;await save();updCount();toast('Page '+doc.pages.length+' added')}
+
+/* ---------- Perspective crop ---------- */
+function warp(c,q){const D=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),W=Math.max(50,Math.round(Math.max(D(q[0],q[1]),D(q[3],q[2])))),H=Math.max(50,Math.round(Math.max(D(q[0],q[3]),D(q[1],q[2]))));
+  const[p0,p1,p2,p3]=q,dx1=p1.x-p2.x,dx2=p3.x-p2.x,dx3=p0.x-p1.x+p2.x-p3.x,dy1=p1.y-p2.y,dy2=p3.y-p2.y,dy3=p0.y-p1.y+p2.y-p3.y,det=dx1*dy2-dx2*dy1;
+  let g=0,h=0;if(Math.abs(det)>1e-6){g=(dx3*dy2-dx2*dy3)/det;h=(dx1*dy3-dx3*dy1)/det}
+  const a=p1.x-p0.x+g*p1.x,b=p3.x-p0.x+h*p3.x,d=p1.y-p0.y+g*p1.y,e=p3.y-p0.y+h*p3.y;
+  const sw=c.width,sh=c.height,S=c.getContext('2d').getImageData(0,0,sw,sh).data,o=document.createElement('canvas');o.width=W;o.height=H;
+  const ox=o.getContext('2d'),O=ox.createImageData(W,H),R=O.data;
+  for(let y=0;y<H;y++){const v=y/H;for(let x=0;x<W;x++){const u=x/W,k=g*u+h*v+1,
+    X=Math.min(sw-1.001,Math.max(0,(a*u+b*v+p0.x)/k)),Y=Math.min(sh-1.001,Math.max(0,(d*u+e*v+p0.y)/k)),
+    x0=X|0,y0=Y|0,fx=X-x0,fy=Y-y0,i=(y0*sw+x0)*4,j=i+sw*4,n=(y*W+x)*4;
+    for(let t=0;t<3;t++)R[n+t]=(S[i+t]*(1-fx)+S[i+4+t]*fx)*(1-fy)+(S[j+t]*(1-fx)+S[j+4+t]*fx)*fy;R[n+3]=255}}
+  ox.putImageData(O,0,0);return o}
+
+/* ---------- Filters (shadow removal + adaptive) ---------- */
+function background(d,w,h){const B=Math.max(12,Math.round(Math.max(w,h)/48)),bw=Math.ceil(w/B),bh=Math.ceil(h/B),m=new Uint8ClampedArray(bw*bh*4);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=(y*w+x)*4,k=((y/B|0)*bw+(x/B|0))*4;for(let t=0;t<3;t++)if(d[i+t]>m[k+t])m[k+t]=d[i+t]}
+  for(let k=0;k<m.length;k+=4){for(let t=0;t<3;t++)m[k+t]=Math.max(110,m[k+t]);m[k+3]=255}
+  const s=document.createElement('canvas');s.width=bw;s.height=bh;s.getContext('2d').putImageData(new ImageData(m,bw,bh),0,0);
+  const o=document.createElement('canvas');o.width=w;o.height=h;const x=o.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(s,0,0,w,h);return x.getImageData(0,0,w,h).data}
+function process(im,f,br,ct){const w=im.width,h=im.height,c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(im,0,0);
+  if(f==='orig'&&!br&&!ct)return c;const I=x.getImageData(0,0,w,h),d=I.data,bg=(f==='orig'||f==='light')?null:background(d,w,h),
+  fc=(259*(ct*2+255))/(255*(259-ct*2)),Bv=br*2,L=new Uint8Array(256);
+  for(let v=0;v<256;v++){let r=v;
+    if(f==='magic')r=255*Math.pow(v/255,1.7);else if(f==='gray')r=255*Math.pow(v/255,1.3);else if(f==='light')r=255*Math.pow(v/255,.6);
+    L[v]=f==='bw'?(v<170-Bv?0:255):Math.max(0,Math.min(255,fc*(r-128)+128+Bv))}
+  for(let i=0;i<d.length;i+=4){let r=d[i],g=d[i+1],b=d[i+2];
+    if(bg){r=Math.min(255,r*255/bg[i]);g=Math.min(255,g*255/bg[i+1]);b=Math.min(255,b*255/bg[i+2])}
+    if(f==='gray'||f==='bw')r=g=b=.299*r+.587*g+.114*b;
+    d[i]=L[r|0];d[i+1]=L[g|0];d[i+2]=L[b|0]}
+  x.putImageData(I,0,0);return c}
+async function render(p){p.out=process(await load(p.src),p.filter,p.br,p.ct).toDataURL('image/jpeg',.9)}
+
+/* ---------- Editor ---------- */
+function edit(){stopCam();show('edit');$('title').value=doc.name;view()}
+function view(){const n=doc.pages.length;if(!n){$('pv').removeAttribute('src');$('pn').textContent='0 / 0';$('strip').innerHTML='';return}
+  idx=Math.max(0,Math.min(n-1,idx));const p=cur();$('pv').src=p.out;$('pn').textContent=`${idx+1} / ${n}`;$('br').value=p.br;$('ctr').value=p.ct;
+  document.querySelectorAll('.fc').forEach(e=>e.classList.toggle('on',e.dataset.f===p.filter));
+  const S=$('strip');S.innerHTML='';doc.pages.forEach((q,i)=>{const im=document.createElement('img');im.src=q.out;im.className=i===idx?'on':'';im.onclick=()=>{idx=i;view()};S.append(im)});
+  S.children[idx]&&S.children[idx].scrollIntoView({inline:'center',block:'nearest'})}
+const go=d=>{idx+=d;view()};
+const rename=()=>{doc.name=$('title').value||doc.name;save()};
+async function setF(f){const p=cur();p.filter=f;p.br=p.ct=0;await render(p);view();save()}
+let busy=false,again=false;
+async function adj(){if(busy){again=true;return}busy=true;do{again=false;const p=cur();p.br=+$('br').value;p.ct=+$('ctr').value;await render(p);$('pv').src=p.out}while(again);busy=false;save()}
+async function mv(d){const j=idx+d;if(j<0||j>=doc.pages.length)return;[doc.pages[idx],doc.pages[j]]=[doc.pages[j],doc.pages[idx]];idx=j;view();save()}
+async function delPage(){if(!doc.pages.length||!confirm('Delete this page?'))return;doc.pages.splice(idx,1);
+  if(!doc.pages.length){await dbDel(doc.id);return home()}view();save()}
+const rc=im=>{const c=document.createElement('canvas');c.width=im.height;c.height=im.width;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(Math.PI/2);x.drawImage(im,-im.width/2,-im.height/2);return c.toDataURL('image/jpeg',.92)};
+async function rot(){const p=cur(),[r,s]=await Promise.all([load(p.raw),load(p.src)]),H=r.height,m=p.pts.map(q=>({x:H-q.y,y:q.x}));
+  p.pts=[m[3],m[0],m[1],m[2]];p.raw=rc(r);p.src=rc(s);await render(p);view();save()}
+async function stamp(fn){const p=cur(),im=await load(p.src),c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);fn(x,c);
+  p.src=c.toDataURL('image/jpeg',.92);await render(p);view();save()}
+
+/* crop editor */
+const cc=$('cc'),mg=$('mg');let di=-1,lp=null;
+const hs=()=>{const p=crop.pts;return[...p,...p.map((q,i)=>({x:(q.x+p[(i+1)%4].x)/2,y:(q.y+p[(i+1)%4].y)/2}))]};
+function drawCrop(){const x=cc.getContext('2d'),P=crop.pts,R=cc.width/40;x.drawImage(crop.im,0,0);x.beginPath();P.forEach((q,i)=>x[i?'lineTo':'moveTo'](q.x,q.y));x.closePath();
+  x.fillStyle='rgba(16,185,129,.2)';x.fill();x.lineWidth=R/5;x.strokeStyle='#10b981';x.stroke();hs().forEach(q=>{x.beginPath();x.arc(q.x,q.y,R,0,7);x.fillStyle='#fff';x.fill();x.stroke()})}
+async function recrop(){const p=cur();crop={im:await load(p.raw),pts:p.pts.map(q=>({...q}))};cc.width=crop.im.width;cc.height=crop.im.height;show('crop');drawCrop()}
+const cFull=()=>{crop.pts=box(crop.im);drawCrop()},cAuto=()=>{crop.pts=detect(crop.im,crop.im.width,crop.im.height)||box(crop.im,.03);drawCrop()};
+async function cDone(){const p=cur();p.pts=crop.pts;p.src=warp(crop.im,crop.pts).toDataURL('image/jpeg',.92);await render(p);edit();save()}
+const pos=e=>{const r=cc.getBoundingClientRect();return{x:(e.clientX-r.left)*cc.width/r.width,y:(e.clientY-r.top)*cc.height/r.height}};
+cc.onpointerdown=e=>{if(!crop)return;const p=pos(e);let best=cc.width/40*3;di=-1;hs().forEach((q,i)=>{const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<best){best=d;di=i}});
+  if(di>=0){cc.setPointerCapture(e.pointerId);lp=p;mg.style.display='block'}};
+cc.onpointermove=e=>{if(di<0)return;const p=pos(e),P=crop.pts,dx=p.x-lp.x,dy=p.y-lp.y,cl=q=>{q.x=Math.max(0,Math.min(cc.width,q.x+dx));q.y=Math.max(0,Math.min(cc.height,q.y+dy))};
+  if(di<4)cl(P[di]);else{cl(P[di-4]);cl(P[(di-3)%4])}lp=p;drawCrop();const q=hs()[di],s=cc.width/12;mg.getContext('2d').drawImage(cc,q.x-s/2,q.y-s/2,s,s,0,0,100,100)};
+cc.onpointerup=cc.onpointercancel=()=>{di=-1;mg.style.display='none'};
+
+/* signature + watermark */
+const sg=$('sg'),sx=sg.getContext('2d');let sd=false,sc='#000';
+const sp=e=>{const r=sg.getBoundingClientRect();return[e.clientX-r.left,e.clientY-r.top]};
+sg.onpointerdown=e=>{sd=true;sg.setPointerCapture(e.pointerId);sx.beginPath();sx.moveTo(...sp(e));sx.strokeStyle=sc;sx.lineWidth=3;sx.lineCap='round'};
+sg.onpointermove=e=>{if(sd){sx.lineTo(...sp(e));sx.stroke()}};sg.onpointerup=()=>sd=false;
+async function stampSig(){const im=await load(sg.toDataURL('image/png'));closeM('sig');
+  await stamp((x,c)=>{const w=c.width*.35,h=w*im.height/im.width;x.drawImage(im,c.width-w-30,c.height-h-30,w,h)});toast('Signature added')}
+async function stampWm(){const t=$('wmT').value||'CONFIDENTIAL',o=$('wmO').value/100;closeM('wm');
+  await stamp((x,c)=>{x.translate(c.width/2,c.height/2);x.rotate(-Math.PI/4);x.font=`bold ${c.width/9|0}px sans-serif`;x.fillStyle=`rgba(220,38,38,${o})`;x.textAlign='center';x.fillText(t,0,0)});toast('Watermark applied')}
+
+/* ---------- Text (OCR) + exports ---------- */
+const loadJS=u=>new Promise((ok,no)=>{if(window.Tesseract)return ok();const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)});
+async function ocr(){openM('ocr');const t=$('ocrT');t.textContent='Reading text…';
+  try{await loadJS('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');const w=await Tesseract.createWorker($('lang').value),r=await w.recognize(cur().out);
+    t.textContent=r.data.text.trim()||'No text found on this page.';await w.terminate()}catch(e){t.textContent='Could not read text: '+(e.message||'check your connection')}}
+async function tr(l){if(!l)return;toast('Translating…');try{const r=await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${l}&dt=t&q=${encodeURIComponent($('ocrT').textContent)}`);
+  $('ocrT').textContent=(await r.json())[0].map(i=>i[0]).join('')}catch{toast('Translation failed')}}
+const dl=(n,b)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5e3)};
+const N=()=>doc.name.replace(/[^\w\- ]+/g,'')||'scan';
+function exp(k){const t=$('ocrT').textContent;
+  if(k==='txt')dl(N()+'.txt',new Blob([t]));
+  if(k==='doc')dl(N()+'.doc',new Blob(['\ufeff<html><head><meta charset="utf-8"></head><body><div style="font:12pt Calibri;white-space:pre-wrap">'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div></body></html>'],{type:'application/msword'}));
+  if(k==='csv')dl(N()+'.csv',new Blob(['\ufeff'+t.split('\n').map(l=>l.trim().split(/\s{2,}|\t|,/).map(c=>'"'+c.replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'}));
+  if(k==='copy')navigator.clipboard.writeText(t).then(()=>toast('Copied'))}
+
+async function pdf(share){closeM('exp');if(!doc.pages.length)return toast('Scan a page first');toast('Building PDF…');
+  const{jsPDF}=window.jspdf,a4=$('fmt').value==='a4',q=+$('qual').value,pw=$('pw').value;let P;
+  for(const[i,p]of doc.pages.entries()){const im=await load(p.out),w=im.width,h=im.height,c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0);
+    const d=c.toDataURL('image/jpeg',q),o=w>h?'l':'p',f=a4?[210,297]:[Math.min(w,h)*.2646,Math.max(w,h)*.2646];
+    if(!i)P=new jsPDF({orientation:o,unit:'mm',format:f,compress:true,encryption:pw?{userPassword:pw,ownerPassword:pw,userPermissions:['print','copy']}:undefined});else P.addPage(f,o);
+    const W=P.internal.pageSize.getWidth(),H=P.internal.pageSize.getHeight(),s=Math.min(W/w,H/h);P.addImage(d,'JPEG',(W-w*s)/2,(H-h*s)/2,w*s,h*s,undefined,'FAST')}
+  const b=P.output('blob'),n=N()+'.pdf',f=new File([b],n,{type:'application/pdf'});
+  if(share&&navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:doc.name}).catch(()=>{});else dl(n,b)}
+
+home();
+</script></body></html>
