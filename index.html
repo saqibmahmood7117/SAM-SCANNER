@@ -4,13 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0d1b1e" />
-  <title>SAM-SCANNER Ultimate Pro</title>
+  <title>SAM-SCANNER Pro | OpenCV AI Edition</title>
   
   <link rel="manifest" href="manifest.json" />
   <!-- jsPDF for multi-page PDF generation & encryption -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- Tesseract.js for client-side OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Official OpenCV.js Computer Vision WebAssembly Engine -->
+  <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()"></script>
 
   <style>
     :root {
@@ -43,6 +45,16 @@
     .brand-badge { background: var(--primary); padding: 3px 6px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; }
     .doc-name { background: transparent; border: none; color: #fff; font-size: 0.9rem; font-weight: 600; outline: none; width: 110px; }
     
+    .cv-badge {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--primary-light);
+      color: #6ee7b7;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
     .nav-tabs { display: flex; gap: 4px; align-items: center; }
     .nav-tab-btn {
       background: var(--surface-light);
@@ -110,7 +122,7 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
-    /* Start Screen */
+    /* Start / Landing Screen */
     #cameraStartScreen {
       position: absolute;
       inset: 0;
@@ -136,7 +148,7 @@
       border: 2px solid #334155;
     }
 
-    /* Multi-page Thumbnails */
+    /* Multi-page Strip */
     .pages-slider {
       display: flex;
       gap: 8px;
@@ -358,6 +370,7 @@
     <div class="brand">
       <div class="brand-badge">PRO</div>
       <input type="text" class="doc-name" id="docTitle" value="SAM_Scan" />
+      <span class="cv-badge" id="cvStatusBadge">⚡ OpenCV AI</span>
     </div>
 
     <div class="nav-tabs">
@@ -384,14 +397,14 @@
     </div>
 
     <!-- Status Toast Notification -->
-    <div id="statusToast">Detecting Document Boundary...</div>
+    <div id="statusToast">OpenCV: Detecting Document Boundaries...</div>
 
     <!-- Start / Capture Screen -->
     <div id="cameraStartScreen">
-      <div class="start-icon">📄</div>
+      <div class="start-icon">⚡</div>
       <div>
         <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">SAM-SCANNER Pro</h2>
-        <p style="font-size: 0.85rem; color: #94a3b8;">Document & PDF Tools Suite</p>
+        <p style="font-size: 0.85rem; color: #94a3b8;">OpenCV Powered Edge AI Scanner</p>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 260px;">
         <label class="pill-btn primary" style="justify-content: center; cursor: pointer; padding: 12px;">
@@ -399,7 +412,7 @@
           <input type="file" accept="image/*" capture="environment" style="display: none;" onchange="handleIncomingFiles(event)" />
         </label>
         <label class="pill-btn secondary" style="justify-content: center; cursor: pointer; padding: 12px;">
-          🖼️ Import Files / Gallery
+          🖼️ Import from Gallery
           <input type="file" accept="image/*" multiple style="display: none;" onchange="handleIncomingFiles(event)" />
         </label>
         <button class="pill-btn secondary" style="justify-content: center; padding: 8px;" onclick="tryStartWebcam()">
@@ -526,7 +539,7 @@
     <button class="pill-btn primary" onclick="applyWatermarkToPage()">Apply Watermark</button>
   </div>
 
-  <!-- MODAL 5: PDF Export & Security -->
+  <!-- MODAL 5: PDF Export -->
   <div class="modal-sheet" id="pdfExportModal">
     <div class="modal-head">
       <h3>Export PDF</h3>
@@ -634,7 +647,7 @@
     <!-- State 2: 8-Point Crop Deck -->
     <div id="cropDeck" style="display: none;">
       <div style="display: flex; justify-content: space-between; padding: 12px 14px; gap: 6px;">
-        <button class="pill-btn secondary" onclick="triggerAutoDetect()">⚡ Auto Snap</button>
+        <button class="pill-btn secondary" onclick="triggerAutoDetect()">⚡ OpenCV Snap</button>
         <button class="pill-btn secondary" onclick="selectAllCrop()">Full Page</button>
         <button class="pill-btn secondary" onclick="rotate90()">Rotate ↻</button>
         <button class="pill-btn primary" onclick="applyPerspectiveCrop()">Dewarp & Crop ➔</button>
@@ -735,6 +748,13 @@
 
     let idCardStep = 0;
     let idFrontImage = null;
+    let isOpenCvReady = false;
+
+    function onOpenCvReady() {
+      isOpenCvReady = true;
+      const b = document.getElementById("cvStatusBadge");
+      if (b) b.innerText = "⚡ OpenCV Ready";
+    }
 
     function hideAllViewportOverlays() {
       startScreen.style.display = "none";
@@ -967,17 +987,127 @@
       rawImage.onload = () => {
         if (currentStream) currentStream.getTracks().forEach(t => t.stop());
         hideAllViewportOverlays();
-        initCropScreen();
+        
+        // 1. Detect Boundaries with OpenCV
+        corners = detectDocumentWithOpenCV(rawImage);
+        
+        // 2. Automatically Crop and Dewarp
+        applyPerspectiveCrop();
       };
       rawImage.src = src;
     }
 
     // =========================================================================
-    // ADVANCED OUTWARD RADIAL RAY-CASTING DOCUMENT BOUNDARY DETECTOR
+    // OPENCV C++ / WASM EDGE DETECTION ENGINE
     // =========================================================================
-    function detectDocumentBoundary(img) {
+    function detectDocumentWithOpenCV(img) {
       const w = img.width, h = img.height;
-      
+
+      // If OpenCV is initialized, run full C++ OpenCV pipeline
+      if (typeof cv !== "undefined" && cv.Mat) {
+        let src = null, resized = null, gray = null, blurred = null, thresh = null, contours = null, hierarchy = null;
+        try {
+          showToast("⚡ OpenCV: Segmenting Document...");
+          src = cv.imread(img);
+          const maxDim = 400;
+          const scale = Math.min(maxDim / src.cols, maxDim / src.rows, 1);
+          const sw = Math.round(src.cols * scale);
+          const sh = Math.round(src.rows * scale);
+
+          resized = new cv.Mat();
+          cv.resize(src, resized, new cv.Size(sw, sh), 0, 0, cv.INTER_AREA);
+
+          gray = new cv.Mat();
+          cv.cvtColor(resized, gray, cv.COLOR_RGBA2GRAY);
+
+          blurred = new cv.Mat();
+          cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+
+          // Otsu thresholding separates the paper from the desk
+          thresh = new cv.Mat();
+          cv.threshold(blurred, thresh, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU);
+
+          contours = new cv.MatVector();
+          hierarchy = new cv.Mat();
+          cv.findContours(thresh, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+          let bestCorners = null;
+          let maxArea = 0;
+
+          for (let i = 0; i < contours.size(); i++) {
+            let cnt = contours.get(i);
+            let area = cv.contourArea(cnt);
+
+            // Must occupy at least 15% of frame
+            if (area > maxArea && area > (sw * sh * 0.15)) {
+              let peri = cv.arcLength(cnt, true);
+              let approx = new cv.Mat();
+              cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+              let pts = [];
+              if (approx.rows === 4) {
+                for (let r = 0; r < 4; r++) {
+                  pts.push({ x: approx.data32S[r * 2], y: approx.data32S[r * 2 + 1] });
+                }
+              } else {
+                let hull = new cv.Mat();
+                cv.convexHull(cnt, hull, false, true);
+                for (let r = 0; r < hull.rows; r++) {
+                  pts.push({ x: hull.data32S[r * 2], y: hull.data32S[r * 2 + 1] });
+                }
+                hull.delete();
+              }
+              approx.delete();
+
+              if (pts.length >= 4) {
+                let tl = pts[0], tr = pts[0], br = pts[0], bl = pts[0];
+                let minSum = Infinity, maxSum = -Infinity;
+                let minDiff = Infinity, maxDiff = -Infinity;
+
+                for (let p of pts) {
+                  let s = p.x + p.y;
+                  let d = p.x - p.y;
+                  if (s < minSum) { minSum = s; tl = p; }
+                  if (s > maxSum) { maxSum = s; br = p; }
+                  if (d > maxDiff) { maxDiff = d; tr = p; }
+                  if (d < minDiff) { minDiff = d; bl = p; }
+                }
+
+                bestCorners = [
+                  { x: Math.max(0, Math.min(w, tl.x / scale)), y: Math.max(0, Math.min(h, tl.y / scale)) },
+                  { x: Math.max(0, Math.min(w, tr.x / scale)), y: Math.max(0, Math.min(h, tr.y / scale)) },
+                  { x: Math.max(0, Math.min(w, br.x / scale)), y: Math.max(0, Math.min(h, br.y / scale)) },
+                  { x: Math.max(0, Math.min(w, bl.x / scale)), y: Math.max(0, Math.min(h, bl.y / scale)) }
+                ];
+                maxArea = area;
+              }
+            }
+            cnt.delete();
+          }
+
+          if (bestCorners) {
+            showToast("✓ OpenCV: Document Snapped!");
+            return bestCorners;
+          }
+        } catch (e) {
+          console.error("OpenCV error:", e);
+        } finally {
+          if (src) src.delete();
+          if (resized) resized.delete();
+          if (gray) gray.delete();
+          if (blurred) blurred.delete();
+          if (thresh) thresh.delete();
+          if (contours) contours.delete();
+          if (hierarchy) hierarchy.delete();
+        }
+      }
+
+      // Fast Ray-casting Fallback
+      return detectDocumentRayCasting(img);
+    }
+
+    function detectDocumentRayCasting(img) {
+      const w = img.width, h = img.height;
       const fallback = [
         { x: w * 0.08, y: h * 0.08 },
         { x: w * 0.92, y: h * 0.08 },
@@ -988,8 +1118,7 @@
       try {
         const maxDim = 320;
         const scale = Math.min(maxDim / w, maxDim / h, 1);
-        const sw = Math.floor(w * scale);
-        const sh = Math.floor(h * scale);
+        const sw = Math.floor(w * scale), sh = Math.floor(h * scale);
 
         const cvs = document.createElement("canvas");
         cvs.width = sw; cvs.height = sh;
@@ -1002,110 +1131,53 @@
           gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
         }
 
-        // 1. Locate paper center seed (search inside central 40% area)
-        let bestCx = Math.floor(sw / 2);
-        let bestCy = Math.floor(sh / 2);
-        let maxLum = 0;
-        const minX = Math.floor(sw * 0.3), maxX = Math.floor(sw * 0.7);
-        const minY = Math.floor(sh * 0.3), maxY = Math.floor(sh * 0.7);
-
-        for (let y = minY; y < maxY; y += 8) {
-          for (let x = minX; x < maxX; x += 8) {
-            let sum = 0;
-            for (let dy = -2; dy <= 2; dy++) {
-              for (let dx = -2; dx <= 2; dx++) {
-                sum += gray[(y + dy) * sw + (x + dx)];
-              }
-            }
-            const avg = sum / 25;
-            if (avg > maxLum) {
-              maxLum = avg;
-              bestCx = x;
-              bestCy = y;
-            }
-          }
-        }
-
-        // 2. Cast 64 radial rays outward from document seed to detect paper boundary
+        let bestCx = Math.floor(sw / 2), bestCy = Math.floor(sh / 2);
         const numRays = 64;
         const boundaryPts = [];
-        const dropLimits = [35, 25, 18];
 
-        for (let t = 0; t < dropLimits.length; t++) {
-          const dropLimit = dropLimits[t];
-          boundaryPts.length = 0;
+        for (let i = 0; i < numRays; i++) {
+          const angle = (2 * Math.PI * i) / numRays;
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
+          const maxR = Math.hypot(sw, sh);
 
-          for (let i = 0; i < numRays; i++) {
-            const angle = (2 * Math.PI * i) / numRays;
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            const maxR = Math.hypot(sw, sh);
+          let foundR = null;
+          for (let r = 12; r < maxR; r += 2) {
+            const xIn = Math.round(bestCx + (r - 4) * cosA);
+            const yIn = Math.round(bestCy + (r - 4) * sinA);
+            const xOut = Math.round(bestCx + (r + 4) * cosA);
+            const yOut = Math.round(bestCy + (r + 4) * sinA);
 
-            let foundR = null;
-            for (let r = 12; r < maxR; r += 2) {
-              const xIn = Math.round(bestCx + (r - 4) * cosA);
-              const yIn = Math.round(bestCy + (r - 4) * sinA);
-              const xOut = Math.round(bestCx + (r + 4) * cosA);
-              const yOut = Math.round(bestCy + (r + 4) * sinA);
-
-              if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) {
-                break;
-              }
-
-              // Detect first sharp drop from white paper to surrounding desk
-              const diff = gray[yIn * sw + xIn] - gray[yOut * sw + xOut];
-              if (diff >= dropLimit) {
-                foundR = r;
-                break;
-              }
-            }
-
-            if (foundR !== null) {
-              boundaryPts.push({
-                x: Math.round(bestCx + foundR * cosA),
-                y: Math.round(bestCy + foundR * sinA)
-              });
+            if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) break;
+            if (gray[yIn * sw + xIn] - gray[yOut * sw + xOut] >= 25) {
+              foundR = r;
+              break;
             }
           }
-
-          if (boundaryPts.length >= 24) break;
+          if (foundR !== null) {
+            boundaryPts.push({ x: Math.round(bestCx + foundR * cosA), y: Math.round(bestCy + foundR * sinA) });
+          }
         }
 
-        // 3. Extract the 4 Quadrilateral Paper Corners
         if (boundaryPts.length >= 20) {
           let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
-          let minSum = Infinity, maxSum = -Infinity;
-          let minDiff = Infinity, maxDiff = -Infinity;
+          let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
 
-          for (let i = 0; i < boundaryPts.length; i++) {
-            const pt = boundaryPts[i];
-            const s = pt.x + pt.y;
-            const diff = pt.x - pt.y;
-
+          for (let pt of boundaryPts) {
+            let s = pt.x + pt.y, diff = pt.x - pt.y;
             if (s < minSum) { minSum = s; tl = pt; }
             if (s > maxSum) { maxSum = s; br = pt; }
             if (diff > maxDiff) { maxDiff = diff; tr = pt; }
             if (diff < minDiff) { minDiff = diff; bl = pt; }
           }
 
-          const detectedCorners = [
+          return [
             { x: Math.max(0, Math.min(w, tl.x / scale)), y: Math.max(0, Math.min(h, tl.y / scale)) },
             { x: Math.max(0, Math.min(w, tr.x / scale)), y: Math.max(0, Math.min(h, tr.y / scale)) },
             { x: Math.max(0, Math.min(w, br.x / scale)), y: Math.max(0, Math.min(h, br.y / scale)) },
             { x: Math.max(0, Math.min(w, bl.x / scale)), y: Math.max(0, Math.min(h, bl.y / scale)) }
           ];
-
-          const topW = Math.hypot(detectedCorners[1].x - detectedCorners[0].x, detectedCorners[1].y - detectedCorners[0].y);
-          const leftH = Math.hypot(detectedCorners[3].x - detectedCorners[0].x, detectedCorners[3].y - detectedCorners[0].y);
-
-          if (topW > w * 0.25 && leftH > h * 0.25) {
-            showToast("✓ Document Paper Snapped!");
-            return detectedCorners;
-          }
         }
-      } catch (err) {
-        console.error("Ray boundary detection error:", err);
-      }
+      } catch (err) {}
 
       return fallback;
     }
@@ -1118,18 +1190,15 @@
     }
 
     function triggerAutoDetect() {
-      corners = detectDocumentBoundary(rawImage);
+      corners = detectDocumentWithOpenCV(rawImage);
       renderCropOverlay();
-      showToast("Corners Snapped to Paper");
+      showToast("OpenCV: Corners Snapped");
     }
 
     function initCropScreen() {
       hideAllViewportOverlays();
       cropCanvas.width = rawImage.width;
       cropCanvas.height = rawImage.height;
-
-      // Automatically find paper boundaries
-      corners = detectDocumentBoundary(rawImage);
 
       cropCanvas.style.display = "block";
       displayCanvas.style.display = "none";
@@ -1144,7 +1213,6 @@
     function renderCropOverlay() {
       cropCtx.drawImage(rawImage, 0, 0);
 
-      // Boundary polygon
       cropCtx.beginPath();
       cropCtx.moveTo(corners[0].x, corners[0].y);
       for (let i = 1; i < 4; i++) cropCtx.lineTo(corners[i].x, corners[i].y);
@@ -1155,7 +1223,6 @@
       cropCtx.fillStyle = "rgba(16, 185, 129, 0.18)";
       cropCtx.fill();
 
-      // Corner handles
       corners.forEach(c => {
         cropCtx.beginPath();
         cropCtx.arc(c.x, c.y, 24, 0, 2 * Math.PI);
@@ -1166,7 +1233,6 @@
         cropCtx.stroke();
       });
 
-      // 4 Edge Midpoint Handles
       for (let i = 0; i < 4; i++) {
         const next = (i + 1) % 4;
         const midX = (corners[i].x + corners[next].x) / 2;
@@ -1242,7 +1308,6 @@
       loadSingleImage(temp.toDataURL("image/jpeg", 0.95));
     }
 
-    // Perspective Transformation
     function applyPerspectiveCrop() {
       showToast("Dewarping & Enhancing...");
 
@@ -1332,7 +1397,6 @@
       ctx.restore();
     }
 
-    // CamScanner Magic Color & Enhancements
     function applyPresetFilter(type) {
       currentFilter = type;
       const w = displayCanvas.width, h = displayCanvas.height;
