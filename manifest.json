@@ -1,14 +1,52 @@
 {
-  "name": "SAM-SCANNER Pro",
-  "short_name": "SAM Scanner",
-  "description": "Scan documents, ID cards and books to PDF, with OCR.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "name": "SAM-SCANNER Ultimate Pro",
+  "short_name": "SAM Scan",
+  "description": "Professional document scanner, AI font restorer, PDF tools suite, and OCR text extractor.",
+  "start_url": "/SAM-SCANNER/",
+  "scope": "/SAM-SCANNER/",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0b1220",
-  "theme_color": "#0b1220",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0f1d",
+  "theme_color": "#1e293b",
+  "categories": ["productivity", "utilities", "business"],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Scan Document",
+      "short_name": "Scan",
+      "description": "Open camera to scan a new document",
+      "url": "/SAM-SCANNER/",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Import Files",
+      "short_name": "Import",
+      "description": "Import document images from gallery",
+      "url": "/SAM-SCANNER/",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
