@@ -24,7 +24,8 @@ html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
 .empty{text-align:center;margin-top:30vh}
 .fab{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:10px}
 .vp{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#05080f;min-height:0}
-.vp video{width:100%;height:100%;object-fit:contain}
+.vp video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#pt{display:none;position:absolute;touch-action:none}
 .vp canvas,.vp img{max-width:100%;max-height:100%}
 #ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -68,12 +69,12 @@ html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
 
 <div id="cam" class="scr">
   <div class="bar"><button class="ib" onclick="closeCam()">✕</button>
-    <div class="modes" id="modes"><span class="on" data-m="doc">Document</span><span data-m="idcard">ID Card</span><span data-m="book">Book</span></div>
+    <div class="modes" id="modes"><span class="on" data-m="doc">Document</span><span data-m="idcard">ID Card</span><span data-m="book">Book</span><span data-m="idphoto">ID Photo</span></div>
     <button class="ib" onclick="torch()">🔦</button></div>
   <div class="vp"><video id="vid" autoplay playsinline muted></video><canvas id="ov"></canvas><div id="fl"></div></div>
   <div class="deck">
     <div id="cth" onclick="edit()"></div>
-    <button class="shut" onclick="shoot()"></button>
+    <label class="ib">📸<input id="nat" type="file" accept="image/*" capture="environment" hidden onchange="imp(this)"></label><button class="shut" onclick="shoot()"></button>
     <label class="ib">🖼️<input type="file" accept="image/*" multiple hidden onchange="imp(this)"></label>
   </div>
 </div>
@@ -85,7 +86,7 @@ html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
 
 <div id="edit" class="scr">
   <div class="bar"><button class="ib" onclick="home()">←</button><input id="title" onchange="rename()"><button class="b" onclick="openM('exp')">PDF ⤓</button></div>
-  <div class="vp"><img id="pv"><div class="nav"><button onclick="go(-1)">‹</button><span id="pn"></span><button onclick="go(1)">›</button></div></div>
+  <div class="vp"><img id="pv"><canvas id="pt"></canvas><div class="nav"><button onclick="go(-1)">‹</button><span id="pn"></span><button onclick="go(1)">›</button></div></div>
   <div id="strip"></div>
   <div class="sl">☀️<input id="br" type="range" min="-50" max="50" value="0" oninput="adj()" onchange="adj()">◐<input id="ctr" type="range" min="-50" max="50" value="0" oninput="adj()" onchange="adj()"></div>
   <div class="row">
@@ -104,6 +105,12 @@ html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
     <button class="tl" onclick="mv(-1)"><span>◀</span>Move</button>
     <button class="tl" onclick="mv(1)"><span>▶</span>Move</button>
     <button class="tl" onclick="openCam()"><span>➕</span>Add</button>
+    <button class="tl" onclick="paintTool('eraser')"><span>🧹</span>Eraser</button>
+    <button class="tl" onclick="paintTool('highlighter')"><span>🖍️</span>Highlight</button>
+    <button class="tl" onclick="jigsaw()"><span>🧩</span>Jigsaw</button>
+    <button class="tl" onclick="split()"><span>📑</span>Split</button>
+    <button class="tl" onclick="merge()"><span>🔗</span>Merge</button>
+    <button class="tl" onclick="openM('idp')"><span>🪪</span>ID bg</button>
     <button class="tl" onclick="delPage()"><span>🗑️</span>Delete</button>
   </div>
 </div>
@@ -130,6 +137,9 @@ html,body{height:100%;background:var(--bg);color:var(--t);overflow:hidden}
   <label>Translate to<select onchange="tr(this.value)"><option value="">Select…</option><option value="ur">Urdu</option><option value="ar">Arabic</option><option value="en">English</option><option value="fr">French</option><option value="es">Spanish</option></select></label>
   <div class="acts"><button class="b sec" onclick="exp('copy')">Copy</button><button class="b sec" onclick="exp('doc')">Word</button><button class="b sec" onclick="exp('csv')">Excel</button><button class="b" onclick="exp('txt')">.txt</button></div></div>
 
+<div class="sheet" id="idp"><h3>ID photo background <button class="ib" onclick="closeM('idp')">✕</button></h3>
+  <div style="display:flex;gap:16px;justify-content:center;padding:8px"><button class="ib" style="font-size:2rem" onclick="idBg('#ffffff')">⚪</button><button class="ib" style="font-size:2rem" onclick="idBg('#2563eb')">🔵</button><button class="ib" style="font-size:2rem" onclick="idBg('#dc2626')">🔴</button><button class="ib" style="font-size:2rem" onclick="idBg('#94a3b8')">🔘</button></div>
+  <p style="font-size:.78rem;color:var(--m)">Works best with a plain, evenly lit wall behind you. Output is 35×45 mm (413×531 px).</p></div>
 <div id="toast"></div>
 
 <script>
@@ -162,15 +172,16 @@ async function home(){stopCam();doc=null;show('home');const l=(await dbAll()).so
 
 /* ---------- Camera ---------- */
 function startScan(){doc=null;idFront=null;openCam()}
-async function openCam(){if(!doc)doc=newDoc();show('cam');updCount();
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});
-    $('vid').srcObject=stream;timer=setInterval(liveDetect,500)}
-  catch(e){toast('Camera blocked — use Import (🖼️) to pick a photo')}}
+async function openCam(){if(!doc)doc=newDoc();show('cam');updCount();let err=null;
+  if(!window.isSecureContext||!navigator.mediaDevices)return toast('Live camera needs HTTPS (GitHub Pages) — tap 📸 to take a photo instead');
+  for(const c of[{video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},{video:true}]){try{stream=await navigator.mediaDevices.getUserMedia(c);break}catch(e){err=e}}
+  if(!stream)return toast(err&&err.name==='NotAllowedError'?'Camera permission denied — allow it in browser settings, or tap 📸':'Camera unavailable — tap 📸 to take a photo');
+  const v=$('vid');v.srcObject=stream;try{await v.play()}catch{}timer=setInterval(liveDetect,500)}
 function stopCam(){clearInterval(timer);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;tOn=false}
 function closeCam(){stopCam();doc&&doc.pages.length?edit():home()}
 async function torch(){try{tOn=!tOn;await stream.getVideoTracks()[0].applyConstraints({advanced:[{torch:tOn}]})}catch{toast('Torch not supported')}}
 $('modes').onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;idFront=null;[...$('modes').children].forEach(s=>s.classList.toggle('on',s===e.target));
-  toast({doc:'Document',idcard:'ID card: capture FRONT, then BACK',book:'Book: capture the open 2-page spread'}[m])};
+  toast({doc:'Document',idcard:'ID card: capture FRONT, then BACK',idphoto:'ID photo: take a front-facing portrait',book:'Book: capture the open 2-page spread'}[m])};
 function updCount(){const n=doc?doc.pages.length:0,t=$('cth');t.style.backgroundImage=n?`url(${doc.pages[n-1].out})`:'none';t.innerHTML=n?`<i>${n}</i>`:''}
 
 const dc=document.createElement('canvas');
@@ -192,13 +203,14 @@ function liveDetect(){const v=$('vid');if(!v.videoWidth)return;const c=$('ov'),W
   x.fillStyle='rgba(16,185,129,.22)';x.fill();x.strokeStyle='#10b981';x.lineWidth=3;x.stroke()}
 
 function fit(src,w,h){const s=Math.min(1,MAXW/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c}
-async function shoot(){const v=$('vid');if(!stream||!v.videoWidth)return toast('Camera not ready — use Import');
+async function shoot(){const v=$('vid');if(!stream||!v.videoWidth)return $('nat').click();
   $('fl').style.opacity=.8;setTimeout(()=>$('fl').style.opacity=0,120);await handle(fit(v,v.videoWidth,v.videoHeight))}
 async function imp(i){const fs=[...i.files];i.value='';if(!fs.length)return;toast('Processing…');if(!doc)doc=newDoc();
   for(const f of fs){const b=await createImageBitmap(f);await handle(fit(b,b.width,b.height))}
   $('cam').classList.contains('on')?updCount():doc.pages.length&&edit()}
 
 async function handle(c){
+  if(mode==='idphoto'){const W=413,H=531,k=Math.max(W/c.width,H/c.height),o=document.createElement('canvas');o.width=W;o.height=H;o.getContext('2d').drawImage(c,(W-c.width*k)/2,(H-c.height*k)/2,c.width*k,c.height*k);await addPage(o,true,'orig');openM('idp');return}
   if(mode==='book'){const h=c.width>>1;for(const x of[0,h]){const p=document.createElement('canvas');p.width=h;p.height=c.height;p.getContext('2d').drawImage(c,x,0,h,c.height,0,0,h,c.height);await addPage(p)}return}
   if(mode==='idcard'){const p=warp(c,detect(c,c.width,c.height)||box(c,.03));
     if(!idFront){idFront=p;return toast('Front saved — now capture the BACK')}
@@ -206,8 +218,8 @@ async function handle(c){
     [f,p].forEach((im,i)=>{const s=Math.min(900/im.width,560/im.height),w=im.width*s,h=im.height*s;x.drawImage(im,170+(900-w)/2,150+i*820+(560-h)/2,w,h)});
     return addPage(A,true)}
   await addPage(c)}
-async function addPage(raw,full){const pts=full?box(raw):(detect(raw,raw.width,raw.height)||box(raw,.03));
-  const p={raw:raw.toDataURL('image/jpeg',.85),pts,filter:'magic',br:0,ct:0,src:warp(raw,pts).toDataURL('image/jpeg',.92)};
+async function addPage(raw,full,f0){const pts=full?box(raw):(detect(raw,raw.width,raw.height)||box(raw,.03));
+  const p={raw:raw.toDataURL('image/jpeg',.85),pts,filter:f0||'magic',br:0,ct:0,src:warp(raw,pts).toDataURL('image/jpeg',.92)};
   await render(p);doc.pages.push(p);idx=doc.pages.length-1;await save();updCount();toast('Page '+doc.pages.length+' added')}
 
 /* ---------- Perspective crop ---------- */
@@ -240,16 +252,16 @@ function process(im,f,br,ct){const w=im.width,h=im.height,c=document.createEleme
     if(f==='gray'||f==='bw')r=g=b=.299*r+.587*g+.114*b;
     d[i]=L[r|0];d[i+1]=L[g|0];d[i+2]=L[b|0]}
   x.putImageData(I,0,0);return c}
-async function render(p){p.out=process(await load(p.src),p.filter,p.br,p.ct).toDataURL('image/jpeg',.9)}
+async function render(p){const c=process(await load(p.src),p.filter,p.br,p.ct);if(p.ann)c.getContext('2d').drawImage(await load(p.ann),0,0,c.width,c.height);p.out=c.toDataURL('image/jpeg',.9)}
 
 /* ---------- Editor ---------- */
 function edit(){stopCam();show('edit');$('title').value=doc.name;view()}
-function view(){const n=doc.pages.length;if(!n){$('pv').removeAttribute('src');$('pn').textContent='0 / 0';$('strip').innerHTML='';return}
+function view(){tool=null;$('pt').style.display='none';$('pv').style.visibility='';const n=doc.pages.length;if(!n){$('pv').removeAttribute('src');$('pn').textContent='0 / 0';$('strip').innerHTML='';return}
   idx=Math.max(0,Math.min(n-1,idx));const p=cur();$('pv').src=p.out;$('pn').textContent=`${idx+1} / ${n}`;$('br').value=p.br;$('ctr').value=p.ct;
   document.querySelectorAll('.fc').forEach(e=>e.classList.toggle('on',e.dataset.f===p.filter));
-  const S=$('strip');S.innerHTML='';doc.pages.forEach((q,i)=>{const im=document.createElement('img');im.src=q.out;im.className=i===idx?'on':'';im.onclick=()=>{idx=i;view()};S.append(im)});
+  const S=$('strip');S.innerHTML='';doc.pages.forEach((q,i)=>{const im=document.createElement('img');im.src=q.out;im.className=i===idx?'on':'';im.onclick=async()=>{if(tool)await endPaint();idx=i;view()};S.append(im)});
   S.children[idx]&&S.children[idx].scrollIntoView({inline:'center',block:'nearest'})}
-const go=d=>{idx+=d;view()};
+const go=async d=>{if(tool)await endPaint();idx+=d;view()};
 const rename=()=>{doc.name=$('title').value||doc.name;save()};
 async function setF(f){const p=cur();p.filter=f;p.br=p.ct=0;await render(p);view();save()}
 let busy=false,again=false;
@@ -259,7 +271,7 @@ async function delPage(){if(!doc.pages.length||!confirm('Delete this page?'))ret
   if(!doc.pages.length){await dbDel(doc.id);return home()}view();save()}
 const rc=im=>{const c=document.createElement('canvas');c.width=im.height;c.height=im.width;const x=c.getContext('2d');x.translate(c.width/2,c.height/2);x.rotate(Math.PI/2);x.drawImage(im,-im.width/2,-im.height/2);return c.toDataURL('image/jpeg',.92)};
 async function rot(){const p=cur(),[r,s]=await Promise.all([load(p.raw),load(p.src)]),H=r.height,m=p.pts.map(q=>({x:H-q.y,y:q.x}));
-  p.pts=[m[3],m[0],m[1],m[2]];p.raw=rc(r);p.src=rc(s);await render(p);view();save()}
+  p.pts=[m[3],m[0],m[1],m[2]];p.ann=null;p.raw=rc(r);p.src=rc(s);await render(p);view();save()}
 async function stamp(fn){const p=cur(),im=await load(p.src),c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);fn(x,c);
   p.src=c.toDataURL('image/jpeg',.92);await render(p);view();save()}
 
@@ -270,7 +282,7 @@ function drawCrop(){const x=cc.getContext('2d'),P=crop.pts,R=cc.width/40;x.drawI
   x.fillStyle='rgba(16,185,129,.2)';x.fill();x.lineWidth=R/5;x.strokeStyle='#10b981';x.stroke();hs().forEach(q=>{x.beginPath();x.arc(q.x,q.y,R,0,7);x.fillStyle='#fff';x.fill();x.stroke()})}
 async function recrop(){const p=cur();crop={im:await load(p.raw),pts:p.pts.map(q=>({...q}))};cc.width=crop.im.width;cc.height=crop.im.height;show('crop');drawCrop()}
 const cFull=()=>{crop.pts=box(crop.im);drawCrop()},cAuto=()=>{crop.pts=detect(crop.im,crop.im.width,crop.im.height)||box(crop.im,.03);drawCrop()};
-async function cDone(){const p=cur();p.pts=crop.pts;p.src=warp(crop.im,crop.pts).toDataURL('image/jpeg',.92);await render(p);edit();save()}
+async function cDone(){const p=cur();p.pts=crop.pts;p.ann=null;p.src=warp(crop.im,crop.pts).toDataURL('image/jpeg',.92);await render(p);edit();save()}
 const pos=e=>{const r=cc.getBoundingClientRect();return{x:(e.clientX-r.left)*cc.width/r.width,y:(e.clientY-r.top)*cc.height/r.height}};
 cc.onpointerdown=e=>{if(!crop)return;const p=pos(e);let best=cc.width/40*3;di=-1;hs().forEach((q,i)=>{const d=Math.hypot(q.x-p.x,q.y-p.y);if(d<best){best=d;di=i}});
   if(di>=0){cc.setPointerCapture(e.pointerId);lp=p;mg.style.display='block'}};
@@ -311,6 +323,36 @@ async function pdf(share){closeM('exp');if(!doc.pages.length)return toast('Scan 
     const W=P.internal.pageSize.getWidth(),H=P.internal.pageSize.getHeight(),s=Math.min(W/w,H/h);P.addImage(d,'JPEG',(W-w*s)/2,(H-h*s)/2,w*s,h*s,undefined,'FAST')}
   const b=P.output('blob'),n=N()+'.pdf',f=new File([b],n,{type:'application/pdf'});
   if(share&&navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],title:doc.name}).catch(()=>{});else dl(n,b)}
+
+/* ---------- Eraser + highlighter (kept as a separate layer, survives filter changes) ---------- */
+let tool=null,annC=null,pd=false;const pt=$('pt');
+async function paintTool(t){if(tool===t)return endPaint();if(tool)await endPaint();const p=cur(),im=await load(p.out);tool=t;pt.width=im.width;pt.height=im.height;pt.getContext('2d').drawImage(im,0,0);
+  annC=document.createElement('canvas');annC.width=im.width;annC.height=im.height;if(p.ann)annC.getContext('2d').drawImage(await load(p.ann),0,0,im.width,im.height);
+  pt.style.display='block';$('pv').style.visibility='hidden';toast((t==='eraser'?'Eraser':'Highlighter')+' on — drag on the page, tap the tool again to apply')}
+async function endPaint(){const p=cur();p.ann=annC.toDataURL('image/png');await render(p);view();save()}
+const ptDraw=e=>{const r=pt.getBoundingClientRect(),x=(e.clientX-r.left)*pt.width/r.width,y=(e.clientY-r.top)*pt.height/r.height,s=pt.width/45;
+  for(const k of[pt.getContext('2d'),annC.getContext('2d')]){k.fillStyle=tool==='eraser'?'#fff':'rgba(250,204,21,.35)';k.beginPath();k.arc(x,y,tool==='eraser'?s:s*.8,0,7);k.fill()}};
+pt.onpointerdown=e=>{if(!tool)return;pd=true;pt.setPointerCapture(e.pointerId);ptDraw(e)};pt.onpointermove=e=>{if(pd&&tool)ptDraw(e)};pt.onpointerup=pt.onpointercancel=()=>pd=false;
+
+/* ---------- ID photo background ---------- */
+async function idBg(hex){closeM('idp');const p=cur(),im=await load(p.raw),W=im.width,H=im.height,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);const I=x.getImageData(0,0,W,H),d=I.data;
+  let r=0,g=0,b=0;for(const[X,Y]of[[3,3],[W-4,3],[3,H-4],[W-4,H-4]]){const i=(Y*W+X)*4;r+=d[i]/4;g+=d[i+1]/4;b+=d[i+2]/4}
+  const C=[1,3,5].map(i=>parseInt(hex.substr(i,2),16)),seen=new Uint8Array(W*H),st=[],ok=i=>Math.abs(d[i*4]-r)+Math.abs(d[i*4+1]-g)+Math.abs(d[i*4+2]-b)<110,push=i=>{if(!seen[i]&&ok(i)){seen[i]=1;st.push(i)}};
+  for(let X=0;X<W;X++){push(X);push((H-1)*W+X)}for(let Y=0;Y<H;Y++){push(Y*W);push(Y*W+W-1)}
+  while(st.length){const i=st.pop(),X=i%W;d[i*4]=C[0];d[i*4+1]=C[1];d[i*4+2]=C[2];if(X>0)push(i-1);if(X<W-1)push(i+1);if(i>=W)push(i-W);if(i<W*(H-1))push(i+W)}
+  x.putImageData(I,0,0);p.src=c.toDataURL('image/jpeg',.95);p.filter='orig';p.ann=null;await render(p);view();save();toast('Background changed')}
+
+/* ---------- Jigsaw, split, merge ---------- */
+async function jigsaw(){const n=confirm('OK = 4 pages per A4 sheet\nCancel = 2 pages per sheet')?4:2,L=doc.pages.slice(idx,idx+n);if(L.length<2)return toast('Select the first page of the set — need 2+ pages from here');
+  const A=document.createElement('canvas');A.width=1240;A.height=1754;const x=A.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,1240,1754);
+  const cw=n===4?600:1200,ch=n===4?857:850,pos=n===4?[[20,20],[620,20],[20,877],[620,877]]:[[20,20],[20,877]];
+  for(const[i,p]of L.entries()){const im=await load(p.out),k=Math.min(cw/im.width,ch/im.height),w=im.width*k,h=im.height*k,[X,Y]=pos[i];x.drawImage(im,X+(cw-w)/2,Y+(ch-h)/2,w,h);x.strokeStyle='#cbd5e1';x.strokeRect(X,Y,cw,ch)}
+  await addPage(A,true,'orig');view();toast('Jigsaw sheet added')}
+async function split(){const n=doc.pages.length,a=parseInt(prompt('Split PDF — first page (1-'+n+'):','1')),b=parseInt(prompt('Last page:',n));if(!(a>=1&&b>=a&&b<=n))return toast('Invalid page range');
+  const d=newDoc();d.name=doc.name+' ('+a+'-'+b+')';d.pages=JSON.parse(JSON.stringify(doc.pages.slice(a-1,b)));await dbPut(d);toast('Saved as a new document in your library')}
+async function merge(){const l=(await dbAll()).filter(d=>d.id!==doc.id);if(!l.length)return toast('No other documents to merge');
+  const k=parseInt(prompt('Merge which document into this one?\n'+l.map((d,i)=>(i+1)+'. '+d.name).join('\n')));if(!l[k-1])return;
+  doc.pages.push(...JSON.parse(JSON.stringify(l[k-1].pages)));idx=doc.pages.length-1;await save();view();toast('Merged')}
 
 home();
 </script></body></html>
