@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>SAM-SCANNER Pro | CamScanner Edition</title>
   
   <link rel="manifest" href="manifest.json" />
@@ -23,35 +25,40 @@
       --text-muted: #64748b;
       --border-color: #e2e8f0;
       --shutter-glow: rgba(0, 240, 181, 0.4);
+      --danger: #ef4444;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
-    body { background: var(--bg-light); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg-light); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; position: fixed; width: 100%; }
+
+    /* Utility screen containers */
+    .app-screen { display: none; flex-direction: column; height: 100vh; height: 100dvh; width: 100%; position: absolute; inset: 0; overflow: hidden; background: var(--bg-light); z-index: 10; }
+    .app-screen.active { display: flex; }
 
     /* =========================================================
-       SCREEN 1: CAMSCANNER HOME DASHBOARD (IMAGE 1)
+       SCREEN 1: HOME DASHBOARD
        ========================================================= */
     #homeScreen {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
       overflow-y: auto;
-      background: #f8fafc;
-      padding-bottom: 70px;
+      padding-bottom: 74px;
+      z-index: 10;
     }
 
-    /* Top Search Bar & Header Icons */
     .home-top-bar {
       padding: 12px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
       background: #fff;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .search-box {
       flex: 1;
       background: #f1f5f9;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 8px 12px;
       display: flex;
       align-items: center;
@@ -59,15 +66,16 @@
       color: #64748b;
       font-size: 0.9rem;
     }
-    .search-box input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.9rem; }
-    .top-icon-btn { font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; }
+    .search-box input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.9rem; color: #0f172a; }
+    .top-icon-btn { font-size: 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; transition: background 0.2s; }
+    .top-icon-btn:active { background: #e2e8f0; }
 
-    /* 8 Quick Tools Grid */
+    /* Quick Tools Grid */
     .quick-tools-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px 6px;
-      padding: 14px 12px;
+      gap: 14px 8px;
+      padding: 16px 12px;
       background: #fff;
       border-bottom: 8px solid #f1f5f9;
     }
@@ -78,44 +86,50 @@
       gap: 6px;
       cursor: pointer;
     }
+    .quick-tool-item:active { transform: scale(0.96); }
     .quick-tool-icon {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.4rem;
+      font-size: 1.35rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
     }
-    .quick-tool-label { font-size: 0.72rem; color: #334155; font-weight: 500; text-align: center; }
+    .quick-tool-label { font-size: 0.72rem; color: #334155; font-weight: 600; text-align: center; }
 
     /* Recents Section */
     .recents-header {
-      padding: 14px 16px 8px 16px;
+      padding: 16px 16px 8px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .recents-title { font-size: 1.05rem; font-weight: 800; color: #0f172a; }
-    .recents-view-all { font-size: 0.8rem; color: #64748b; font-weight: 600; cursor: pointer; }
+    .recents-title { font-size: 1.1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px; }
+    .recents-badge { background: #e2e8f0; color: #475569; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .recents-actions { display: flex; gap: 12px; font-size: 0.8rem; color: #059669; font-weight: 600; cursor: pointer; }
 
-    .recents-list { display: flex; flex-direction: column; gap: 8px; padding: 4px 12px; }
+    .recents-list { display: flex; flex-direction: column; gap: 10px; padding: 6px 14px; }
     
     .doc-card {
       background: #fff;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
       border: 1px solid #edf2f7;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: transform 0.15s, box-shadow 0.15s;
     }
-    .doc-card-main { display: flex; gap: 12px; align-items: center; }
-    .doc-thumb { width: 50px; height: 60px; border-radius: 6px; object-fit: cover; background: #e2e8f0; }
+    .doc-card:active { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .doc-card-main { display: flex; gap: 12px; align-items: center; cursor: pointer; }
+    .doc-thumb { width: 54px; height: 68px; border-radius: 6px; object-fit: cover; background: #e2e8f0; border: 1px solid #cbd5e1; flex-shrink: 0; }
     .doc-info { flex: 1; overflow: hidden; }
-    .doc-title { font-size: 0.9rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .doc-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+    .doc-title { font-size: 0.92rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; }
+    .doc-meta { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; display: flex; gap: 8px; align-items: center; }
+    .page-count-pill { background: #f0fdf4; color: #16a34a; font-weight: 600; padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; }
     
     .doc-card-actions {
       display: flex;
@@ -134,41 +148,47 @@
       color: #334155;
       cursor: pointer;
       text-align: center;
+      transition: all 0.15s;
     }
+    .doc-action-btn:active { background: #e2e8f0; }
+    .doc-action-btn.danger { color: #ef4444; border-color: #fee2e2; background: #fff5f5; }
 
-    /* Floating Action Camera Button */
+    /* Floating Camera Button */
     .fab-camera {
       position: fixed;
       bottom: 74px;
       right: 20px;
-      width: 60px;
-      height: 60px;
+      width: 62px;
+      height: 62px;
       border-radius: 50%;
-      background: #059669;
-      box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);
+      background: linear-gradient(135deg, #059669, #047857);
+      box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45);
       display: flex;
       align-items: center;
       justify-content: center;
       color: #fff;
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       cursor: pointer;
       z-index: 50;
       border: none;
+      transition: transform 0.2s;
     }
+    .fab-camera:active { transform: scale(0.92); }
 
-    /* Bottom Navigation Bar (Image 1) */
+    /* Bottom Navigation Bar */
     .bottom-nav {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 56px;
+      height: 58px;
       background: #fff;
       border-top: 1px solid #e2e8f0;
       display: flex;
       justify-content: space-around;
       align-items: center;
       z-index: 40;
+      padding-bottom: env(safe-area-inset-bottom, 0);
     }
     .nav-item {
       display: flex;
@@ -178,35 +198,36 @@
       font-size: 0.7rem;
       color: #64748b;
       cursor: pointer;
+      flex: 1;
+      padding: 6px 0;
     }
     .nav-item.active { color: #059669; font-weight: 700; }
-    .nav-item span:first-child { font-size: 1.2rem; }
+    .nav-item span:first-child { font-size: 1.25rem; }
 
     /* =========================================================
-       SCREEN 2: CAMSCANNER CAMERA & LIVE DETECT VIEW (IMAGE 2)
+       SCREEN 2: CAMERA & LIVE DETECT VIEW
        ========================================================= */
     #cameraScreen {
-      display: none;
-      flex-direction: column;
-      height: 100vh;
       background: #000;
       color: #fff;
-      position: relative;
+      z-index: 20;
     }
 
-    /* Camera Top Bar */
     .cam-top-bar {
-      height: 50px;
+      height: 52px;
       padding: 0 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
       z-index: 30;
+      position: relative;
     }
-    .cam-top-actions { display: flex; gap: 18px; align-items: center; font-size: 1.2rem; }
+    .cam-top-actions { display: flex; gap: 16px; align-items: center; font-size: 1.25rem; }
+    .cam-icon-btn { cursor: pointer; padding: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .cam-icon-btn.active { color: #00f0b5; text-shadow: 0 0 10px #00f0b5; }
 
-    /* Camera Viewport */
     .cam-viewport {
       flex: 1;
       position: relative;
@@ -218,7 +239,6 @@
     }
     #cameraVideo { width: 100%; height: 100%; object-fit: cover; }
     
-    /* LIVE CYAN DETECTED BOUNDARY CANVAS */
     #liveBoundaryCanvas {
       position: absolute;
       inset: 0;
@@ -227,10 +247,40 @@
       pointer-events: none;
       z-index: 10;
     }
-
     #trackCanvas { display: none; }
 
-    /* Permission Friendly Screen (No popup alert) */
+    /* ID Card Overlay guide */
+    #idCardGuideOverlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      pointer-events: none;
+      z-index: 15;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .id-card-frame {
+      width: 82%;
+      max-width: 320px;
+      aspect-ratio: 1.586;
+      border: 2px dashed #00f0b5;
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+      position: relative;
+    }
+    .id-card-badge {
+      background: rgba(0, 240, 181, 0.9);
+      color: #042f2e;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 4px 14px;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* Permission Friendly Screen */
     #camPermissionNotice {
       position: absolute;
       inset: 0;
@@ -242,13 +292,13 @@
       padding: 24px;
       text-align: center;
       gap: 14px;
-      z-index: 20;
+      z-index: 25;
     }
 
     /* Single / Batch Pill */
     .pill-mode-container {
       position: absolute;
-      bottom: 120px;
+      bottom: 126px;
       left: 0;
       right: 0;
       display: flex;
@@ -256,7 +306,7 @@
       z-index: 25;
     }
     .pill-mode-box {
-      background: rgba(30, 41, 59, 0.75);
+      background: rgba(30, 41, 59, 0.8);
       backdrop-filter: blur(8px);
       padding: 4px;
       border-radius: 20px;
@@ -265,52 +315,54 @@
       border: 1px solid rgba(255,255,255,0.15);
     }
     .pill-mode-btn {
-      padding: 5px 16px;
+      padding: 6px 18px;
       border-radius: 16px;
       border: none;
       background: transparent;
       color: #94a3b8;
-      font-size: 0.78rem;
+      font-size: 0.8rem;
       font-weight: 600;
       cursor: pointer;
     }
-    .pill-mode-btn.active { background: #475569; color: #fff; }
+    .pill-mode-btn.active { background: #059669; color: #fff; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.4); }
 
     /* Mode Carousel */
     .cam-mode-carousel {
       position: absolute;
-      bottom: 80px;
+      bottom: 84px;
       left: 0;
       right: 0;
       display: flex;
       justify-content: center;
-      gap: 20px;
-      font-size: 0.8rem;
+      gap: 22px;
+      font-size: 0.82rem;
       font-weight: 600;
       color: #94a3b8;
       z-index: 25;
       overflow-x: auto;
-      padding: 6px 12px;
+      padding: 6px 16px;
       white-space: nowrap;
     }
-    .cam-mode-item { cursor: pointer; transition: color 0.2s; position: relative; }
+    .cam-mode-item { cursor: pointer; transition: color 0.2s; position: relative; padding: 4px 2px; }
     .cam-mode-item.active { color: #00f0b5; }
     .cam-mode-item.active::after {
       content: "";
       position: absolute;
-      bottom: -4px;
+      bottom: -2px;
       left: 50%;
       transform: translateX(-50%);
       width: 4px;
       height: 4px;
-      background: #ef4444;
+      background: #00f0b5;
       border-radius: 50%;
+      box-shadow: 0 0 6px #00f0b5;
     }
 
-    /* Bottom Shutter Deck (Image 2) */
+    /* Bottom Shutter Deck */
     .cam-shutter-deck {
-      height: 80px;
+      height: 84px;
       background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
       display: flex;
       justify-content: space-around;
       align-items: center;
@@ -330,7 +382,9 @@
       justify-content: center;
       cursor: pointer;
       box-shadow: 0 0 16px var(--shutter-glow);
+      transition: transform 0.1s;
     }
+    .cam-shutter-outer:active { transform: scale(0.93); }
     .cam-shutter-inner {
       width: 100%;
       height: 100%;
@@ -342,31 +396,131 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3px;
-      font-size: 0.7rem;
+      gap: 4px;
+      font-size: 0.72rem;
       color: #cbd5e1;
       cursor: pointer;
+      min-width: 60px;
+      position: relative;
     }
-    .cam-deck-icon { font-size: 1.4rem; }
+    .cam-deck-icon { font-size: 1.45rem; }
+    .batch-badge {
+      position: absolute;
+      top: -4px;
+      right: 8px;
+      background: #059669;
+      color: #fff;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #000;
+    }
 
     /* =========================================================
-       SCREEN 3: EDIT, CROP & FILTER REVIEW SCREEN
+       SCREEN 3: INTERACTIVE CORNER CROP SCREEN (CamScanner Style)
+       ========================================================= */
+    #cropScreen {
+      background: #0b0f19;
+      color: #fff;
+      z-index: 20;
+    }
+    .crop-top-bar {
+      height: 52px;
+      padding: 0 16px;
+      background: #111827;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1f2937;
+    }
+    .crop-viewport {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #030712;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #cropInteractiveCanvas {
+      max-width: 100%;
+      max-height: 100%;
+      touch-action: none;
+    }
+    /* Corner Magnifier Loupe */
+    #cropLoupe {
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 3px solid #00f0b5;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      display: none;
+      pointer-events: none;
+      z-index: 40;
+      background: #000;
+      overflow: hidden;
+    }
+    #cropLoupe canvas { width: 100%; height: 100%; }
+    .loupe-crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+    }
+    .loupe-crosshair::before, .loupe-crosshair::after {
+      content: "";
+      position: absolute;
+      background: #00f0b5;
+    }
+    .loupe-crosshair::before { top: 7px; left: 0; right: 0; height: 2px; }
+    .loupe-crosshair::after { left: 7px; top: 0; bottom: 0; width: 2px; }
+
+    .crop-bottom-bar {
+      background: #111827;
+      border-top: 1px solid #1f2937;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+
+    /* =========================================================
+       SCREEN 4: REVIEW, FILTER & MULTI-PAGE SCREEN
        ========================================================= */
     #reviewScreen {
-      display: none;
-      flex-direction: column;
-      height: 100vh;
-      background: #0f172a;
+      background: #0b0f19;
       color: #fff;
+      z-index: 20;
     }
     .review-top-bar {
       height: 52px;
       padding: 0 14px;
-      background: #1e293b;
+      background: #111827;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid #1f2937;
+    }
+    .doc-title-input {
+      background: transparent;
+      border: 1px dashed rgba(255,255,255,0.25);
+      border-radius: 6px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 4px 8px;
+      text-align: center;
+      max-width: 180px;
     }
     .review-viewport {
       flex: 1;
@@ -374,78 +528,242 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000;
+      background: #030712;
       overflow: hidden;
     }
-    #cropCanvas, #displayCanvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #displayCanvas { max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
 
-    .review-bottom-bar {
-      background: #1e293b;
+    /* Multi-Page Strip */
+    .page-strip-container {
+      background: #111827;
+      border-top: 1px solid #1f2937;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+    }
+    .page-thumb-item {
+      width: 44px;
+      height: 58px;
+      border-radius: 4px;
+      border: 2px solid transparent;
+      background: #1f2937;
+      cursor: pointer;
+      object-fit: cover;
+      flex-shrink: 0;
+      opacity: 0.6;
+      transition: all 0.2s;
+    }
+    .page-thumb-item.active { border-color: #00f0b5; opacity: 1; transform: scale(1.05); }
+    .add-page-thumb-btn {
+      width: 44px;
+      height: 58px;
+      border-radius: 4px;
+      border: 2px dashed #475569;
+      background: transparent;
+      color: #cbd5e1;
       display: flex;
       flex-direction: column;
-      border-top: 1px solid #334155;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      flex-shrink: 0;
     }
 
-    /* Universal Modal */
+    /* Filter Strip */
+    .filter-scroll-strip {
+      background: #0f172a;
+      display: flex;
+      gap: 12px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      border-top: 1px solid #1e293b;
+    }
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 18px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .filter-chip.active { background: #059669; color: #fff; border-color: #059669; }
+
+    .review-bottom-actions {
+      background: #111827;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #1f2937;
+    }
+    .tool-icon-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+      cursor: pointer;
+      background: none;
+      border: none;
+    }
+    .tool-icon-btn span:first-child { font-size: 1.25rem; }
+
+    /* Sliders bar */
+    .sliders-panel {
+      background: #1e293b;
+      padding: 8px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.75rem;
+    }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type=range] { flex: 1; accent-color: #059669; }
+
+    /* =========================================================
+       MODAL SHEETS
+       ========================================================= */
     .modal-sheet {
       position: fixed;
       bottom: 0; left: 0; right: 0;
       background: #fff;
       color: #0f172a;
-      border-top-left-radius: 16px;
-      border-top-right-radius: 16px;
-      padding: 16px;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 20px 18px;
       display: none;
       flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 -8px 24px rgba(0,0,0,0.3);
+      gap: 14px;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.35);
       z-index: 100;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
+      animation: slideUp 0.25s ease-out;
     }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
     .modal-head { display: flex; justify-content: space-between; align-items: center; }
-    .modal-head h3 { font-size: 0.95rem; font-weight: 700; }
-    .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
+    .modal-head h3 { font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+    .modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #64748b; padding: 4px; }
 
     .pill-btn {
-      padding: 8px 16px;
-      border-radius: 20px;
+      padding: 10px 18px;
+      border-radius: 22px;
       border: none;
       font-weight: 600;
-      font-size: 0.8rem;
+      font-size: 0.84rem;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
     }
+    .pill-btn:active { transform: scale(0.97); }
     .pill-btn.primary { background: #059669; color: #fff; }
-    .pill-btn.secondary { background: #334155; color: #cbd5e1; }
+    .pill-btn.secondary { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; }
+    .pill-btn.danger { background: #ef4444; color: #fff; }
 
-    #sigCanvas { background: #fff; border-radius: 8px; width: 100%; height: 160px; touch-action: none; cursor: crosshair; border: 1px solid #cbd5e1; }
+    #sigCanvas { background: #fff; border-radius: 10px; width: 100%; height: 180px; touch-action: none; cursor: crosshair; border: 2px dashed #cbd5e1; }
+    
+    /* OCR Results Box */
+    .ocr-result-area {
+      width: 100%;
+      height: 180px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      resize: none;
+      outline: none;
+    }
+
+    /* Toast Notification */
+    #toastNotice {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      color: #fff;
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      z-index: 1000;
+      display: none;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* Progress bar */
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+      display: none;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: #059669;
+      transition: width 0.2s;
+    }
   </style>
 </head>
 <body>
 
+  <!-- Floating Toast Notification -->
+  <div id="toastNotice"></div>
+
   <!-- =========================================================
-       VIEW 1: CAMSCANNER HOME SCREEN (IMAGE 1)
+       VIEW 1: CAMSCANNER HOME SCREEN
        ========================================================= -->
-  <div id="homeScreen">
+  <div id="homeScreen" class="app-screen active">
     
     <div class="home-top-bar">
       <div class="search-box">
         <span>🔍</span>
-        <input type="text" id="searchDocsInput" placeholder="Search" oninput="filterRecents(this.value)" />
+        <input type="text" id="searchDocsInput" placeholder="Search files or OCR text" oninput="filterRecents(this.value)" />
       </div>
-      <div class="top-icon-btn" title="Cloud Sync" onclick="alert('Cloud sync active')">☁️</div>
-      <div class="top-icon-btn" title="Premium" onclick="alert('SAM-SCANNER Pro: All features unlocked!')">👑</div>
+      <div class="top-icon-btn" title="Cloud Sync" onclick="showToast('Cloud sync is active (Auto-backup)')">☁️</div>
+      <div class="top-icon-btn" title="Pro Mode" onclick="showToast('SAM-SCANNER Pro: All features unlocked!')">👑</div>
     </div>
 
+    <!-- Quick Tools Grid -->
     <div class="quick-tools-grid">
-      <div class="quick-tool-item" onclick="openCameraView()">
+      <div class="quick-tool-item" onclick="startScannerFlow('scan')">
         <div class="quick-tool-icon" style="background:#ecfdf5; color:#059669;">🖨️</div>
         <div class="quick-tool-label">Smart Scan</div>
       </div>
-      <div class="quick-tool-item" onclick="openModal('pdfToolsModal')">
+      <div class="quick-tool-item" onclick="startScannerFlow('batch')">
+        <div class="quick-tool-icon" style="background:#f0fdf4; color:#16a34a;">📚</div>
+        <div class="quick-tool-label">Batch Scan</div>
+      </div>
+      <div class="quick-tool-item" onclick="startScannerFlow('idcard')">
+        <div class="quick-tool-icon" style="background:#f0fdfa; color:#0d9488;">🪪</div>
+        <div class="quick-tool-label">ID Cards</div>
+      </div>
+      <div class="quick-tool-item" onclick="startScannerFlow('ocr')">
+        <div class="quick-tool-icon" style="background:#faf5ff; color:#9333ea;">🔤</div>
+        <div class="quick-tool-label">Extract Text</div>
+      </div>
+      <div class="quick-tool-item" onclick="openModalSheet('pdfToolsModal')">
         <div class="quick-tool-icon" style="background:#fee2e2; color:#ef4444;">📑</div>
         <div class="quick-tool-label">PDF Tools</div>
       </div>
@@ -453,51 +771,47 @@
         <div class="quick-tool-icon" style="background:#eff6ff; color:#2563eb;">🖼️</div>
         <div class="quick-tool-label">Import Images</div>
       </div>
-      <div class="quick-tool-item" onclick="triggerFileInput()">
-        <div class="quick-tool-icon" style="background:#eff6ff; color:#3b82f6;">📁</div>
-        <div class="quick-tool-label">Import Files</div>
+      <div class="quick-tool-item" onclick="triggerMergeToPdf()">
+        <div class="quick-tool-icon" style="background:#fef3c7; color:#d97706;">📎</div>
+        <div class="quick-tool-label">Merge to PDF</div>
       </div>
-      <div class="quick-tool-item" onclick="openCameraView('idcard')">
-        <div class="quick-tool-icon" style="background:#f0fdfa; color:#0d9488;">🪪</div>
-        <div class="quick-tool-label">ID Cards</div>
-      </div>
-      <div class="quick-tool-item" onclick="openCameraView('ocr')">
-        <div class="quick-tool-icon" style="background:#f0fdf4; color:#16a34a;">🔤</div>
-        <div class="quick-tool-label">Extract Text</div>
-      </div>
-      <div class="quick-tool-item" onclick="openCameraView('ai')">
-        <div class="quick-tool-icon" style="background:#fdf4ff; color:#a855f7;">✨</div>
-        <div class="quick-tool-label">Solver AI</div>
-      </div>
-      <div class="quick-tool-item" onclick="openModal('pdfToolsModal')">
+      <div class="quick-tool-item" onclick="openModalSheet('pdfToolsModal')">
         <div class="quick-tool-icon" style="background:#f1f5f9; color:#475569;">⊞</div>
-        <div class="quick-tool-label">All</div>
+        <div class="quick-tool-label">All Features</div>
       </div>
     </div>
 
+    <!-- Recents Section -->
     <div class="recents-header">
-      <span class="recents-title">Recents</span>
-      <span class="recents-view-all" onclick="renderRecentsList()">View All ❯</span>
+      <div class="recents-title">
+        <span>Recents</span>
+        <span class="recents-badge" id="recentsCountBadge">0</span>
+      </div>
+      <div class="recents-actions">
+        <span onclick="triggerFileInput()">+ Import</span>
+      </div>
     </div>
 
     <div class="recents-list" id="recentsContainer"></div>
 
-    <button class="fab-camera" onclick="openCameraView()">📷</button>
+    <!-- Floating Action Camera Button -->
+    <button class="fab-camera" onclick="startScannerFlow('scan')">📷</button>
 
+    <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
-      <div class="nav-item active" onclick="showHomeScreen()">
+      <div class="nav-item active" onclick="navigateHome()">
         <span>🏠</span>
         <span>Home</span>
       </div>
-      <div class="nav-item" onclick="renderRecentsList()">
+      <div class="nav-item" onclick="renderRecentsList(); showToast('All documents refreshed')">
         <span>📄</span>
-        <span>All Documents</span>
+        <span>Files</span>
       </div>
-      <div class="nav-item" onclick="openModal('pdfToolsModal')">
+      <div class="nav-item" onclick="openModalSheet('pdfToolsModal')">
         <span>⊞</span>
         <span>Tools</span>
       </div>
-      <div class="nav-item" onclick="alert('Profile: Saqib (EDU Edition)')">
+      <div class="nav-item" onclick="showToast('SAM-SCANNER Pro v2.5 (EDU Edition)')">
         <span>👤</span>
         <span>Me</span>
       </div>
@@ -506,17 +820,17 @@
 
 
   <!-- =========================================================
-       VIEW 2: CAMSCANNER CAMERA & LIVE DETECT (IMAGE 2)
+       VIEW 2: CAMSCANNER CAMERA & LIVE DETECT
        ========================================================= -->
-  <div id="cameraScreen">
+  <div id="cameraScreen" class="app-screen">
     
     <div class="cam-top-bar">
-      <div style="font-size: 1.3rem; cursor: pointer;" onclick="showHomeScreen()">✕</div>
+      <div class="cam-icon-btn" onclick="handleNavigationBack()">✕</div>
       <div class="cam-top-actions">
-        <span onclick="toggleFlash()">⚡</span>
-        <span onclick="alert('Magic enhance active')">✨</span>
-        <span style="font-size: 0.8rem; border: 1px solid #fff; padding: 1px 4px; border-radius: 4px;">HD</span>
-        <span onclick="openModal('pdfToolsModal')">⋮</span>
+        <div class="cam-icon-btn" id="flashBtn" onclick="toggleFlash()" title="Toggle Torch">⚡</div>
+        <div class="cam-icon-btn" onclick="flipCamera()" title="Switch Camera">🔄</div>
+        <span style="font-size: 0.78rem; border: 1px solid rgba(255,255,255,0.7); padding: 1px 5px; border-radius: 4px; font-weight: 700;">HD</span>
+        <div class="cam-icon-btn" onclick="openModalSheet('pdfToolsModal')">⋮</div>
       </div>
     </div>
 
@@ -525,24 +839,31 @@
       <canvas id="liveBoundaryCanvas"></canvas>
       <canvas id="trackCanvas" width="240" height="320"></canvas>
 
-      <!-- Friendly Fallback Screen (No alerts) -->
+      <!-- ID Card Overlay Guide -->
+      <div id="idCardGuideOverlay">
+        <div class="id-card-badge" id="idCardStepBadge">Step 1: Scan Front Side</div>
+        <div class="id-card-frame"></div>
+      </div>
+
+      <!-- Friendly Fallback Screen -->
       <div id="camPermissionNotice">
-        <div style="font-size:2.5rem;">📷</div>
-        <h3 style="font-size:1.05rem; font-weight:700;">Live Camera Unavailable</h3>
-        <p style="font-size:0.8rem; color:#94a3b8; max-width:280px; margin-bottom:12px;">
-          Use your phone's built-in shutter directly or choose photos from your gallery:
+        <div style="font-size:2.8rem;">📷</div>
+        <h3 style="font-size:1.1rem; font-weight:700;">Live Camera Unavailable</h3>
+        <p style="font-size:0.82rem; color:#94a3b8; max-width:290px; margin-bottom:12px; line-height:1.4;">
+          You can use your device's native camera shutter or pick photos directly from your gallery:
         </p>
         <label class="pill-btn primary" style="cursor:pointer; padding:12px 24px; font-size:0.9rem;">
-          Take Photo (Phone Camera)
-          <input type="file" accept="image/*" capture="environment" style="display:none;" onchange="handleImportedFiles(event)" />
+          Take Photo (Native Camera)
+          <input type="file" id="nativeShutterInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImportedFiles(event)" />
         </label>
-        <label class="pill-btn secondary" style="cursor:pointer; margin-top:6px;">
+        <label class="pill-btn secondary" style="cursor:pointer; margin-top:4px;">
           Choose from Gallery
-          <input type="file" accept="image/*" multiple style="display:none;" onchange="handleImportedFiles(event)" />
+          <input type="file" id="globalFileInput" accept="image/*" multiple style="display:none;" onchange="handleImportedFiles(event)" />
         </label>
       </div>
     </div>
 
+    <!-- Single / Batch Pill -->
     <div class="pill-mode-container">
       <div class="pill-mode-box">
         <button class="pill-mode-btn active" id="singlePill" onclick="setCapturePill('single')">Single</button>
@@ -550,19 +871,20 @@
       </div>
     </div>
 
+    <!-- Mode Carousel -->
     <div class="cam-mode-carousel">
-      <span class="cam-mode-item" onclick="setCamMode('text')">Text</span>
-      <span class="cam-mode-item" onclick="setCamMode('word')">To Word</span>
-      <span class="cam-mode-item" onclick="setCamMode('sign')">Sign</span>
       <span class="cam-mode-item active" onclick="setCamMode('scan')">Scan</span>
-      <span class="cam-mode-item" onclick="setCamMode('erase')">Smart Erase</span>
+      <span class="cam-mode-item" onclick="setCamMode('batch')">Batch</span>
       <span class="cam-mode-item" onclick="setCamMode('idcard')">ID Cards</span>
+      <span class="cam-mode-item" onclick="setCamMode('ocr')">Extract Text</span>
+      <span class="cam-mode-item" onclick="setCamMode('word')">To Word</span>
     </div>
 
+    <!-- Bottom Shutter Deck -->
     <div class="cam-shutter-deck">
-      <div class="cam-deck-btn" onclick="openModal('pdfToolsModal')">
+      <div class="cam-deck-btn" onclick="openModalSheet('pdfToolsModal')">
         <span class="cam-deck-icon">⊞</span>
-        <span>All Features</span>
+        <span>Tools</span>
       </div>
 
       <!-- Universal Shutter -->
@@ -570,543 +892,207 @@
         <div class="cam-shutter-inner"></div>
       </div>
 
-      <div class="cam-deck-btn" onclick="triggerFileInput()">
-        <span class="cam-deck-icon">🖼️</span>
-        <span>Import Images</span>
+      <!-- Right deck button: Gallery or Batch Finish -->
+      <div class="cam-deck-btn" id="camRightDeckBtn" onclick="handleRightDeckClick()">
+        <span class="cam-deck-icon" id="camRightDeckIcon">🖼️</span>
+        <span id="camRightDeckText">Import</span>
+        <span class="batch-badge" id="batchCountBadge" style="display:none;">0</span>
       </div>
     </div>
   </div>
 
 
   <!-- =========================================================
-       VIEW 3: REVIEW, DEWARP & FILTER SCREEN
+       VIEW 3: INTERACTIVE CORNER CROP & PERSPECTIVE ADJUST SCREEN
        ========================================================= -->
-  <div id="reviewScreen">
+  <div id="cropScreen" class="app-screen">
+    <div class="crop-top-bar">
+      <div style="cursor: pointer; font-size:0.9rem;" onclick="handleNavigationBack()">❮ Retake</div>
+      <span style="font-weight: 700; font-size: 0.95rem;">Adjust Corners</span>
+      <button class="pill-btn primary" style="padding:6px 14px;" onclick="confirmCropAndProceed()">Next ❯</button>
+    </div>
+
+    <div class="crop-viewport" id="cropViewport">
+      <canvas id="cropInteractiveCanvas"></canvas>
+      
+      <!-- Magnifying Loupe for Precision Corner Dragging -->
+      <div id="cropLoupe">
+        <canvas id="cropLoupeCanvas" width="110" height="110"></canvas>
+        <div class="loupe-crosshair"></div>
+      </div>
+    </div>
+
+    <div class="crop-bottom-bar">
+      <button class="pill-btn secondary" onclick="autoDetectCornersOnCrop()">🪄 Auto Detect</button>
+      <button class="pill-btn secondary" onclick="snapCornersToFull()">⏹️ Full Image</button>
+      <button class="pill-btn secondary" onclick="rotateRawCapturedImage()">🔄 Rotate</button>
+    </div>
+  </div>
+
+
+  <!-- =========================================================
+       VIEW 4: REVIEW, FILTER, MULTI-PAGE & EXPORT SCREEN
+       ========================================================= -->
+  <div id="reviewScreen" class="app-screen">
     <div class="review-top-bar">
-      <span style="cursor: pointer;" onclick="openCameraView()">❮ Retake</span>
-      <span style="font-weight: 700; font-size: 0.9rem;" id="reviewDocTitle">Scanned Document</span>
-      <button class="pill-btn primary" onclick="saveToRecentsAndHome()">Save</button>
+      <div style="cursor: pointer; font-size:0.9rem;" onclick="handleNavigationBack()">❮ Back</div>
+      <input type="text" id="reviewDocTitle" class="doc-title-input" value="Scanned Document" />
+      <button class="pill-btn primary" style="padding:6px 16px;" onclick="saveToRecentsAndHome()">Save</button>
+    </div>
+
+    <!-- Multi-Page Thumbnail Strip -->
+    <div class="page-strip-container" id="pageStripContainer" style="display:none;">
+      <div id="pageStripList" style="display:flex; gap:8px;"></div>
+      <button class="add-page-thumb-btn" onclick="addPageToCurrentDoc()" title="Add another page">
+        <span>+</span>
+        <span style="font-size:0.6rem;">Add</span>
+      </button>
     </div>
 
     <div class="review-viewport">
-      <canvas id="cropCanvas" style="display: none;"></canvas>
       <canvas id="displayCanvas"></canvas>
     </div>
 
-    <div class="review-bottom-bar">
-      <div style="display: flex; justify-content: space-around; padding: 10px 14px; background:#141f32;">
-        <button class="pill-btn secondary" onclick="applyMagicFilter('magic')">Magic Color</button>
-        <button class="pill-btn secondary" onclick="applyMagicFilter('bw')">B&W</button>
-        <button class="pill-btn secondary" onclick="openModal('sigModal')">✍️ Sign</button>
-        <button class="pill-btn secondary" onclick="openModal('watermarkModal')">🛡️ Watermark</button>
+    <!-- Sliders Adjustment Panel -->
+    <div class="sliders-panel" id="slidersPanel">
+      <div class="slider-row">
+        <span>☀️ Brightness</span>
+        <input type="range" id="brightnessRange" min="-50" max="50" value="0" oninput="updateSliders()" />
+      </div>
+      <div class="slider-row">
+        <span>🌓 Contrast</span>
+        <input type="range" id="contrastRange" min="-50" max="50" value="0" oninput="updateSliders()" />
       </div>
     </div>
+
+    <!-- Filter Carousel -->
+    <div class="filter-scroll-strip">
+      <div class="filter-chip active" id="filterMagic" onclick="selectFilter('magic')">Magic Color</div>
+      <div class="filter-chip" id="filterBw" onclick="selectFilter('bw')">Sharp B&W</div>
+      <div class="filter-chip" id="filterGray" onclick="selectFilter('gray')">Grayscale</div>
+      <div class="filter-chip" id="filterOriginal" onclick="selectFilter('original')">Original</div>
+      <div class="filter-chip" id="filterLighten" onclick="selectFilter('lighten')">Toner Saver</div>
+      <div class="filter-chip" id="filterInvert" onclick="selectFilter('invert')">Invert</div>
+    </div>
+
+    <!-- Action Tools -->
+    <div class="review-bottom-actions">
+      <button class="tool-icon-btn" onclick="rotateCurrentReviewPage()">
+        <span>🔄</span>
+        <span>Rotate</span>
+      </button>
+      <button class="tool-icon-btn" onclick="toggleSlidersPanel()">
+        <span>🎚️</span>
+        <span>Tune</span>
+      </button>
+      <button class="tool-icon-btn" onclick="openSignatureModal()">
+        <span>✍️</span>
+        <span>Sign</span>
+      </button>
+      <button class="tool-icon-btn" onclick="openWatermarkModal()">
+        <span>🛡️</span>
+        <span>Watermark</span>
+      </button>
+      <button class="tool-icon-btn" onclick="runOcrOnCurrentPage()">
+        <span>🔤</span>
+        <span>OCR</span>
+      </button>
+      <button class="tool-icon-btn" onclick="exportCurrentDocPdf()">
+        <span>📑</span>
+        <span>PDF</span>
+      </button>
+    </div>
   </div>
 
-  <input type="file" id="globalFileInput" accept="image/*" multiple style="display: none;" onchange="handleImportedFiles(event)" />
-  <input type="file" id="nativeShutterInput" accept="image/*" capture="environment" style="display: none;" onchange="handleImportedFiles(event)" />
+  <input type="file" id="mergePdfFileInput" accept="image/*" multiple style="display: none;" onchange="handleMergePdfFiles(event)" />
 
-  <!-- PDF Tools Modal -->
+  <!-- =========================================================
+       MODAL 1: PDF TOOLS
+       ========================================================= -->
   <div class="modal-sheet" id="pdfToolsModal">
     <div class="modal-head">
-      <h3>PDF Tools & Features</h3>
-      <button class="modal-close" onclick="closeModal('pdfToolsModal')">✕</button>
+      <h3>PDF Tools & Formats</h3>
+      <button class="modal-close" onclick="closeModalSheet('pdfToolsModal')">✕</button>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px;">
-      <button class="pill-btn secondary" onclick="triggerFileInput()">Merge PDF / Images</button>
-      <button class="pill-btn secondary" onclick="openModal('sigModal')">PDF Signature</button>
-      <button class="pill-btn secondary" onclick="openModal('watermarkModal')">PDF Watermark</button>
-      <button class="pill-btn secondary" onclick="exportCurrentToPdf(true)">PDF Password Lock</button>
-      <button class="pill-btn secondary" onclick="exportCurrentToWord()">Image to Word</button>
-      <button class="pill-btn secondary" onclick="exportCurrentToExcel()">Image to Excel</button>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 6px;">
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); triggerMergeToPdf()">Merge Images to PDF</button>
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); openSignatureModal()">PDF Signature</button>
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); openWatermarkModal()">Anti-Theft Watermark</button>
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); exportWithPasswordPrompt()">PDF Password Lock</button>
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); exportCurrentToWord()">Image to Word (.doc)</button>
+      <button class="pill-btn secondary" onclick="closeModalSheet('pdfToolsModal'); exportCurrentToExcel()">Image to Excel (.csv)</button>
     </div>
   </div>
 
-  <!-- Signature Modal -->
+  <!-- =========================================================
+       MODAL 2: ELECTRONIC SIGNATURE
+       ========================================================= -->
   <div class="modal-sheet" id="sigModal">
     <div class="modal-head">
       <h3>Electronic Signature</h3>
-      <button class="modal-close" onclick="closeModal('sigModal')">✕</button>
+      <button class="modal-close" onclick="closeModalSheet('sigModal')">✕</button>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.8rem; color:#64748b;">Sign with finger or stylus:</span>
+      <div style="display:flex; gap:8px;">
+        <span onclick="setSigColor('#0f172a')" style="width:20px; height:20px; border-radius:50%; background:#0f172a; cursor:pointer; display:inline-block; border:2px solid #cbd5e1;"></span>
+        <span onclick="setSigColor('#2563eb')" style="width:20px; height:20px; border-radius:50%; background:#2563eb; cursor:pointer; display:inline-block;"></span>
+        <span onclick="setSigColor('#dc2626')" style="width:20px; height:20px; border-radius:50%; background:#dc2626; cursor:pointer; display:inline-block;"></span>
+      </div>
     </div>
     <canvas id="sigCanvas"></canvas>
-    <div style="display: flex; gap: 8px; justify-content: space-between; margin-top: 8px;">
+    <div style="display: flex; gap: 8px; justify-content: space-between; margin-top: 6px;">
       <button class="pill-btn secondary" onclick="clearSignature()">Clear</button>
       <button class="pill-btn primary" onclick="stampSignature()">Apply Signature</button>
     </div>
   </div>
 
-  <!-- Watermark Modal -->
+  <!-- =========================================================
+       MODAL 3: WATERMARK
+       ========================================================= -->
   <div class="modal-sheet" id="watermarkModal">
     <div class="modal-head">
       <h3>Anti-Theft Watermark</h3>
-      <button class="modal-close" onclick="closeModal('watermarkModal')">✕</button>
+      <button class="modal-close" onclick="closeModalSheet('watermarkModal')">✕</button>
     </div>
-    <input type="text" id="wmText" value="CONFIDENTIAL" style="padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; width: 100%;" />
-    <button class="pill-btn primary" onclick="applyWatermark()">Apply Watermark</button>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <label style="font-size:0.8rem; color:#64748b;">Watermark Text:</label>
+      <input type="text" id="wmText" value="CONFIDENTIAL" style="padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size:0.9rem;" />
+      
+      <label style="font-size:0.8rem; color:#64748b; margin-top:4px;">Watermark Style:</label>
+      <div style="display:flex; gap:8px;">
+        <button class="pill-btn secondary" id="wmStyleDiagonal" style="flex:1;" onclick="setWmStyle('diagonal')">Diagonal Center</button>
+        <button class="pill-btn secondary" id="wmStyleGrid" style="flex:1;" onclick="setWmStyle('grid')">Full Grid Tile</button>
+      </div>
+
+      <label style="font-size:0.8rem; color:#64748b; margin-top:4px;">Opacity: <span id="wmOpacityVal">25%</span></label>
+      <input type="range" id="wmOpacity" min="10" max="70" value="25" oninput="document.getElementById('wmOpacityVal').innerText = this.value + '%'" style="accent-color:#059669;" />
+    </div>
+    <button class="pill-btn primary" style="margin-top:6px;" onclick="applyWatermark()">Apply Watermark</button>
+  </div>
+
+  <!-- =========================================================
+       MODAL 4: OCR EXTRACT TEXT RESULTS
+       ========================================================= -->
+  <div class="modal-sheet" id="ocrModal">
+    <div class="modal-head">
+      <h3>Extracted Text (OCR)</h3>
+      <button class="modal-close" onclick="closeModalSheet('ocrModal')">✕</button>
+    </div>
+    <div class="progress-bar-container" id="ocrProgressContainer">
+      <div class="progress-bar-fill" id="ocrProgressBar"></div>
+    </div>
+    <div style="font-size:0.8rem; color:#64748b;" id="ocrStatusMsg">Extracting text using Tesseract AI engine...</div>
+    <textarea class="ocr-result-area" id="ocrTextResult" placeholder="OCR text will appear here..."></textarea>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="pill-btn primary" style="flex:1;" onclick="copyOcrText()">📋 Copy Text</button>
+      <button class="pill-btn secondary" style="flex:1;" onclick="downloadOcrTxt()">💾 Save as .TXT</button>
+      <button class="pill-btn secondary" style="flex:1;" onclick="exportCurrentToWord()">📝 To Word</button>
+    </div>
   </div>
 
   <script>
-    let currentStream = null;
-    let capturePillMode = "single";
-    let currentCamMode = "scan";
-    let liveTrackingInterval = null;
-
-    let liveDetectedCorners = null;
-    let smoothedCorners = null;
-    let capturedRawImage = new Image();
-    let unenhancedDewarped = null;
-
-    let savedDocuments = JSON.parse(localStorage.getItem("sam_saved_docs") || "[]");
-
-    const homeScreen = document.getElementById("homeScreen");
-    const cameraScreen = document.getElementById("cameraScreen");
-    const reviewScreen = document.getElementById("reviewScreen");
-    const video = document.getElementById("cameraVideo");
-    const liveCvs = document.getElementById("liveBoundaryCanvas");
-    const liveCtx = liveCvs.getContext("2d");
-    const trackCvs = document.getElementById("trackCanvas");
-    const trackCtx = trackCvs.getContext("2d");
-    const displayCvs = document.getElementById("displayCanvas");
-    const displayCtx = displayCvs.getContext("2d");
-    const sigCvs = document.getElementById("sigCanvas");
-    const sigCtx = sigCvs.getContext("2d");
-    const permNotice = document.getElementById("camPermissionNotice");
-
-    function showHomeScreen() {
-      stopCamera();
-      cameraScreen.style.display = "none";
-      reviewScreen.style.display = "none";
-      homeScreen.style.display = "flex";
-      renderRecentsList();
-    }
-
-    function renderRecentsList(filter = "") {
-      const container = document.getElementById("recentsContainer");
-      container.innerHTML = "";
-
-      const list = filter 
-        ? savedDocuments.filter(d => d.title.toLowerCase().includes(filter.toLowerCase()))
-        : savedDocuments;
-
-      if (list.length === 0) {
-        container.innerHTML = `
-          <div style="text-align:center; padding: 40px 20px; color:#94a3b8;">
-            <div style="font-size:2.5rem; margin-bottom:8px;">📄</div>
-            <p style="font-weight:600;">No scanned documents yet</p>
-            <p style="font-size:0.8rem; margin-top:4px;">Tap the camera button below to scan your first document</p>
-          </div>
-        `;
-        return;
-      }
-
-      list.forEach((doc, idx) => {
-        const card = document.createElement("div");
-        card.className = "doc-card";
-        card.innerHTML = `
-          <div class="doc-card-main">
-            <img src="${doc.thumb || doc.pages[0]}" class="doc-thumb" />
-            <div class="doc-info">
-              <div class="doc-title">${doc.title}</div>
-              <div class="doc-meta">${doc.date} | 📄 ${doc.pages.length}</div>
-            </div>
-            <input type="checkbox" style="width:18px; height:18px;" />
-          </div>
-          <div class="doc-card-actions">
-            <div class="doc-action-btn" onclick="shareDoc(${idx})">Share</div>
-            <div class="doc-action-btn" onclick="downloadDocPdf(${idx})">Save as PDF</div>
-            <div class="doc-action-btn" onclick="viewDoc(${idx})">View</div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    function filterRecents(query) { renderRecentsList(query); }
-    function triggerFileInput() { document.getElementById("globalFileInput").click(); }
-
-    // Progressive Camera Initializer (Fixes Overconstrained Error)
-    async function requestCameraStream() {
-      const constraints = [
-        { video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false },
-        { video: { facingMode: "environment" }, audio: false },
-        { video: true, audio: false }
-      ];
-
-      for (let c of constraints) {
-        try {
-          return await navigator.mediaDevices.getUserMedia(c);
-        } catch (e) {
-          console.warn("Retrying with relaxed camera constraint:", e);
-        }
-      }
-      throw new Error("Camera stream denied or unavailable");
-    }
-
-    async function openCameraView(mode = "scan") {
-      homeScreen.style.display = "none";
-      reviewScreen.style.display = "none";
-      cameraScreen.style.display = "flex";
-      permNotice.style.display = "none";
-      video.style.display = "block";
-      setCamMode(mode);
-
-      try {
-        currentStream = await requestCameraStream();
-        video.srcObject = currentStream;
-        video.onloadedmetadata = () => {
-          liveCvs.width = video.videoWidth;
-          liveCvs.height = video.videoHeight;
-          startLiveBoundaryTracking();
-        };
-      } catch (err) {
-        // Show in-UI friendly fallback instead of alert
-        video.style.display = "none";
-        permNotice.style.display = "flex";
-      }
-    }
-
-    function stopCamera() {
-      if (liveTrackingInterval) clearInterval(liveTrackingInterval);
-      if (currentStream) {
-        currentStream.getTracks().forEach(t => t.stop());
-        currentStream = null;
-      }
-    }
-
-    function handleShutterClick() {
-      // If live camera is actively streaming
-      if (currentStream && video.videoWidth) {
-        takePhotoAndAutoCrop();
-      } else {
-        // Direct phone shutter fallback
-        document.getElementById("nativeShutterInput").click();
-      }
-    }
-
-    function setCapturePill(type) {
-      capturePillMode = type;
-      document.getElementById("singlePill").classList.toggle("active", type === "single");
-      document.getElementById("batchPill").classList.toggle("active", type === "batch");
-    }
-
-    function setCamMode(mode) {
-      currentCamMode = mode;
-      document.querySelectorAll(".cam-mode-item").forEach(el => el.classList.remove("active"));
-      if (event && event.target && event.target.classList.contains("cam-mode-item")) {
-        event.target.classList.add("active");
-      }
-    }
-
-    // Real-Time Radial Ray-Casting Boundary Tracking
-    function startLiveBoundaryTracking() {
-      if (liveTrackingInterval) clearInterval(liveTrackingInterval);
-
-      liveTrackingInterval = setInterval(() => {
-        if (!video.videoWidth) return;
-
-        const sw = 240;
-        const sh = Math.round(240 * (video.videoHeight / video.videoWidth));
-        trackCvs.width = sw;
-        trackCvs.height = sh;
-        trackCtx.drawImage(video, 0, 0, sw, sh);
-
-        const d = trackCtx.getImageData(0, 0, sw, sh).data;
-        const gray = new Uint8Array(sw * sh);
-        for (let i = 0; i < d.length; i += 4) {
-          gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-        }
-
-        let bestCx = Math.floor(sw / 2), bestCy = Math.floor(sh / 2);
-        let maxLum = 0;
-        for (let y = Math.floor(sh * 0.3); y < sh * 0.7; y += 12) {
-          for (let x = Math.floor(sw * 0.3); x < sw * 0.7; x += 12) {
-            const lum = gray[y * sw + x];
-            if (lum > maxLum) { maxLum = lum; bestCx = x; bestCy = y; }
-          }
-        }
-
-        const numRays = 48;
-        const boundaryPts = [];
-        const scaleX = video.videoWidth / sw;
-        const scaleY = video.videoHeight / sh;
-
-        for (let i = 0; i < numRays; i++) {
-          const angle = (2 * Math.PI * i) / numRays;
-          const cosA = Math.cos(angle), sinA = Math.sin(angle);
-          const maxR = Math.hypot(sw, sh);
-
-          let foundR = null;
-          for (let r = 12; r < maxR; r += 3) {
-            const xIn = Math.round(bestCx + (r - 4) * cosA);
-            const yIn = Math.round(bestCy + (r - 4) * sinA);
-            const xOut = Math.round(bestCx + (r + 4) * cosA);
-            const yOut = Math.round(bestCy + (r + 4) * sinA);
-
-            if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) break;
-            
-            if (gray[yIn * sw + xIn] - gray[yOut * sw + xOut] >= 22) {
-              foundR = r;
-              break;
-            }
-          }
-          if (foundR !== null) {
-            boundaryPts.push({ x: (bestCx + foundR * cosA) * scaleX, y: (bestCy + foundR * sinA) * scaleY });
-          }
-        }
-
-        if (boundaryPts.length >= 18) {
-          let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
-          let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
-
-          for (let pt of boundaryPts) {
-            const s = pt.x + pt.y, diff = pt.x - pt.y;
-            if (s < minSum) { minSum = s; tl = pt; }
-            if (s > maxSum) { maxSum = s; br = pt; }
-            if (diff > maxDiff) { maxDiff = diff; tr = pt; }
-            if (diff < minDiff) { minDiff = diff; bl = pt; }
-          }
-
-          const rawCorners = [tl, tr, br, bl];
-
-          if (!smoothedCorners) {
-            smoothedCorners = rawCorners;
-          } else {
-            for (let c = 0; c < 4; c++) {
-              smoothedCorners[c].x = smoothedCorners[c].x * 0.65 + rawCorners[c].x * 0.35;
-              smoothedCorners[c].y = smoothedCorners[c].y * 0.65 + rawCorners[c].y * 0.35;
-            }
-          }
-          liveDetectedCorners = smoothedCorners;
-          drawLiveCyanPolygon(liveDetectedCorners);
-        } else {
-          liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
-        }
-      }, 100);
-    }
-
-    function drawLiveCyanPolygon(pts) {
-      liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
-
-      liveCtx.save();
-      liveCtx.beginPath();
-      liveCtx.moveTo(pts[0].x, pts[0].y);
-      liveCtx.lineTo(pts[1].x, pts[1].y);
-      liveCtx.lineTo(pts[2].x, pts[2].y);
-      liveCtx.lineTo(pts[3].x, pts[3].y);
-      liveCtx.closePath();
-
-      liveCtx.strokeStyle = "#00f0b5";
-      liveCtx.lineWidth = 4;
-      liveCtx.shadowColor = "#00f0b5";
-      liveCtx.shadowBlur = 10;
-      liveCtx.stroke();
-
-      liveCtx.fillStyle = "rgba(0, 240, 181, 0.08)";
-      liveCtx.fill();
-
-      pts.forEach(pt => {
-        liveCtx.beginPath();
-        liveCtx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI);
-        liveCtx.fillStyle = "#ffffff";
-        liveCtx.shadowBlur = 4;
-        liveCtx.fill();
-      });
-      liveCtx.restore();
-    }
-
-    function takePhotoAndAutoCrop() {
-      const snapCanvas = document.createElement("canvas");
-      snapCanvas.width = video.videoWidth;
-      snapCanvas.height = video.videoHeight;
-      snapCanvas.getContext("2d").drawImage(video, 0, 0);
-
-      const targetCorners = liveDetectedCorners || [
-        { x: video.videoWidth * 0.1, y: video.videoHeight * 0.1 },
-        { x: video.videoWidth * 0.9, y: video.videoHeight * 0.1 },
-        { x: video.videoWidth * 0.9, y: video.videoHeight * 0.9 },
-        { x: video.videoWidth * 0.1, y: video.videoHeight * 0.9 }
-      ];
-
-      capturedRawImage.onload = () => {
-        stopCamera();
-        dewarpAndRender(capturedRawImage, targetCorners);
-      };
-      capturedRawImage.src = snapCanvas.toDataURL("image/jpeg", 0.95);
-    }
-
-    function handleImportedFiles(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        capturedRawImage.onload = () => {
-          stopCamera();
-          const corners = [
-            { x: capturedRawImage.width * 0.08, y: capturedRawImage.height * 0.08 },
-            { x: capturedRawImage.width * 0.92, y: capturedRawImage.height * 0.08 },
-            { x: capturedRawImage.width * 0.92, y: capturedRawImage.height * 0.92 },
-            { x: capturedRawImage.width * 0.08, y: capturedRawImage.height * 0.92 }
-          ];
-          dewarpAndRender(capturedRawImage, corners);
-        };
-        capturedRawImage.src = evt.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function dewarpAndRender(img, pts) {
-      cameraScreen.style.display = "none";
-      homeScreen.style.display = "none";
-      reviewScreen.style.display = "flex";
-
-      const p0 = pts[0], p1 = pts[1], p2 = pts[2], p3 = pts[3];
-      const targetW = Math.round(Math.max(Math.hypot(p1.x - p0.x, p1.y - p0.y), Math.hypot(p2.x - p3.x, p2.y - p3.y)));
-      const targetH = Math.round(Math.max(Math.hypot(p3.x - p0.x, p3.y - p0.y), Math.hypot(p2.x - p1.x, p2.y - p1.y)));
-
-      displayCvs.width = targetW;
-      displayCvs.height = targetH;
-
-      const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
-      const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
-      const det = dx1 * dy2 - dx2 * dy1;
-
-      let g = 0, h = 0;
-      if (Math.abs(det) > 1e-5) {
-        g = (dx3 * dy2 - dx2 * dy3) / det;
-        h = (dx1 * dy3 - dx3 * dy1) / det;
-      }
-      const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + h * p3.x, c = p0.x;
-      const d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + h * p3.y, f = p0.y;
-
-      function mapPt(u, v) {
-        const denom = g * u + h * v + 1;
-        return { x: (a * u + b * v + c) / denom, y: (d * u + e * v + f) / denom };
-      }
-
-      displayCtx.clearRect(0, 0, targetW, targetH);
-      const N = 14;
-      for (let i = 0; i < N; i++) {
-        for (let j = 0; j < N; j++) {
-          const u0 = i / N, v0 = j / N, u1 = (i + 1) / N, v1 = (j + 1) / N;
-          const x0 = u0 * targetW, y0 = v0 * targetH;
-          const x1 = u1 * targetW, y1 = v1 * targetH;
-
-          const s00 = mapPt(u0, v0), s10 = mapPt(u1, v0);
-          const s01 = mapPt(u0, v1), s11 = mapPt(u1, v1);
-
-          drawTri(displayCtx, img, s00.x, s00.y, s10.x, s10.y, s01.x, s01.y, x0, y0, x1, y0, x0, y1);
-          drawTri(displayCtx, img, s10.x, s10.y, s11.x, s11.y, s01.x, s01.y, x1, y0, x1, y1, x0, y1);
-        }
-      }
-
-      unenhancedDewarped = document.createElement("canvas");
-      unenhancedDewarped.width = targetW;
-      unenhancedDewarped.height = targetH;
-      unenhancedDewarped.getContext("2d").drawImage(displayCvs, 0, 0);
-
-      applyMagicFilter("magic");
-    }
-
-    function drawTri(ctx, img, u0, v0, u1, v1, u2, v2, x0, y0, x1, y0_2, x2, y2) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x0, y0); ctx.lineTo(x1, y0_2); ctx.lineTo(x2, y2);
-      ctx.closePath();
-      ctx.clip();
-
-      const delta = u0 * (v1 - v2) - v0 * (u1 - u2) + (u1 * v2 - u2 * v1);
-      if (Math.abs(delta) > 1e-6) {
-        const ma = (x0 * (v1 - v2) + x1 * (v2 - v0) + x2 * (v0 - v1)) / delta;
-        const mc = (x0 * (u2 - u1) + x1 * (u0 - u2) + x2 * (u1 - u0)) / delta;
-        const me = (x0 * (u1 * v2 - u2 * v1) + x1 * (u2 * v0 - u0 * v2) + x2 * (u0 * v1 - u1 * v0)) / delta;
-
-        const mb = (y0 * (v1 - v2) + y0_2 * (v2 - v0) + y2 * (v0 - v1)) / delta;
-        const md = (y0 * (u2 - u1) + y0_2 * (u0 - u2) + y2 * (u1 - u0)) / delta;
-        const mf = (y0 * (u1 * v2 - u2 * v1) + y0_2 * (u2 * v0 - u0 * v2) + y2 * (u0 * v1 - u1 * v0)) / delta;
-
-        ctx.transform(ma, mb, mc, md, me, mf);
-        ctx.drawImage(img, 0, 0);
-      }
-      ctx.restore();
-    }
-
-    function applyMagicFilter(type) {
-      displayCtx.drawImage(unenhancedDewarped, 0, 0);
-      const imgData = displayCtx.getImageData(0, 0, displayCvs.width, displayCvs.height);
-      const d = imgData.data;
-
-      for (let i = 0; i < d.length; i += 4) {
-        const r = d[i], g = d[i+1], b = d[i+2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-        if (type === "magic") {
-          if (lum > 140) {
-            d[i] = Math.min(255, r * 1.3 + 20);
-            d[i+1] = Math.min(255, g * 1.3 + 20);
-            d[i+2] = Math.min(255, b * 1.3 + 20);
-          } else {
-            d[i] = r * 0.72;
-            d[i+1] = g * 0.72;
-            d[i+2] = b * 0.72;
-          }
-        } else if (type === "bw") {
-          const v = lum > 130 ? 255 : 0;
-          d[i] = d[i+1] = d[i+2] = v;
-        }
-      }
-      displayCtx.putImageData(imgData, 0, 0);
-    }
-
-    function saveToRecentsAndHome() {
-      const now = new Date();
-      const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-      const title = `CamScanner ${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}.${String(now.getMinutes()).padStart(2,'0')}`;
-
-      const newDoc = {
-        title: title,
-        date: dateStr,
-        thumb: displayCvs.toDataURL("image/jpeg", 0.7),
-        pages: [displayCvs.toDataURL("image/jpeg", 0.9)]
-      };
-
-      savedDocuments.unshift(newDoc);
-      localStorage.setItem("sam_saved_docs", JSON.stringify(savedDocuments));
-      showHomeScreen();
-    }
-
-    function downloadDocPdf(idx) {
-      const doc = savedDocuments[idx];
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: "p", unit: "px", format: "a4" });
-      const imgW = pdf.internal.pageSize.getWidth();
-      const imgH = pdf.internal.pageSize.getHeight();
-      pdf.addImage(doc.pages[0], "JPEG", 0, 0, imgW, imgH);
-      pdf.save(`${doc.title}.pdf`);
-    }
-
-    function shareDoc(idx) {
-      if (navigator.share) {
-        navigator.share({ title: savedDocuments[idx].title, text: "Shared via SAM-SCANNER Pro" });
-      } else {
-        downloadDocPdf(idx);
-      }
-    }
-
-    function viewDoc(idx) {
-      const doc = savedDocuments[idx];
-      const img = new Image();
-      img.onload = () => {
-        dewarpAndRender(img, [
-          {x:0, y:0}, {x:img.width, y:0}, {x:img.width, y:img.height}, {x:0, y:img.height}
-        ]);
-      };
-      img.src = doc.pages[0];
-    }
-
-    function openModal(id) { document.getElementById(id).style.display = "flex"; }
-    function closeModal(id) { document.getElementById(id).style.display = "none"; }
-
-    window.onload = showHomeScreen;
+    /* Injected app engine script */
   </script>
 </body>
 </html>
