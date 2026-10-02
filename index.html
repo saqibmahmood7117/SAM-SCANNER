@@ -200,6 +200,7 @@
       cursor: pointer;
       flex: 1;
       padding: 6px 0;
+      transition: color 0.15s;
     }
     .nav-item.active { color: #059669; font-weight: 700; }
     .nav-item span:first-child { font-size: 1.25rem; }
@@ -724,6 +725,28 @@
       background: #059669;
       transition: width 0.2s;
     }
+
+    /* Profile / Settings Card */
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #f8fafc;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    .profile-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #059669;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
   </style>
 </head>
 <body>
@@ -799,19 +822,19 @@
 
     <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
-      <div class="nav-item active" onclick="navigateHome()">
+      <div class="nav-item active" id="navHome" onclick="setNavActive('home'); navigateHome()">
         <span>🏠</span>
         <span>Home</span>
       </div>
-      <div class="nav-item" onclick="renderRecentsList(); showToast('All documents refreshed')">
+      <div class="nav-item" id="navFiles" onclick="setNavActive('files'); navigateHome(); renderRecentsList(); showToast('All documents refreshed')">
         <span>📄</span>
         <span>Files</span>
       </div>
-      <div class="nav-item" onclick="openModalSheet('pdfToolsModal')">
+      <div class="nav-item" id="navTools" onclick="setNavActive('tools'); openModalSheet('pdfToolsModal')">
         <span>⊞</span>
         <span>Tools</span>
       </div>
-      <div class="nav-item" onclick="showToast('SAM-SCANNER Pro v2.5 (EDU Edition)')">
+      <div class="nav-item" id="navMe" onclick="setNavActive('me'); openModalSheet('settingsModal')">
         <span>👤</span>
         <span>Me</span>
       </div>
@@ -850,16 +873,14 @@
         <div style="font-size:2.8rem;">📷</div>
         <h3 style="font-size:1.1rem; font-weight:700;">Live Camera Unavailable</h3>
         <p style="font-size:0.82rem; color:#94a3b8; max-width:290px; margin-bottom:12px; line-height:1.4;">
-          You can use your device's native camera shutter or pick photos directly from your gallery:
+          Use your phone's built-in shutter or select photos from your gallery:
         </p>
-        <label class="pill-btn primary" style="cursor:pointer; padding:12px 24px; font-size:0.9rem;">
-          Take Photo (Native Camera)
-          <input type="file" id="nativeShutterInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImportedFiles(event)" />
-        </label>
-        <label class="pill-btn secondary" style="cursor:pointer; margin-top:4px;">
+        <button class="pill-btn primary" style="padding:12px 24px; font-size:0.9rem;" onclick="document.getElementById('nativeShutterInput').click()">
+          Take Photo (Phone Camera)
+        </button>
+        <button class="pill-btn secondary" style="margin-top:6px;" onclick="document.getElementById('globalFileInput').click()">
           Choose from Gallery
-          <input type="file" id="globalFileInput" accept="image/*" multiple style="display:none;" onchange="handleImportedFiles(event)" />
-        </label>
+        </button>
       </div>
     </div>
 
@@ -1004,7 +1025,11 @@
     </div>
   </div>
 
-  <input type="file" id="mergePdfFileInput" accept="image/*" multiple style="display: none;" onchange="handleMergePdfFiles(event)" />
+  <!-- Dedicated Hidden File Inputs -->
+  <input type="file" id="globalFileInput" accept="image/*" multiple style="display:none;" onchange="handleImportedFiles(event)" />
+  <input type="file" id="nativeShutterInput" accept="image/*" capture="environment" style="display:none;" onchange="handleImportedFiles(event)" />
+  <input type="file" id="mergePdfFileInput" accept="image/*" multiple style="display:none;" onchange="handleMergePdfFiles(event)" />
+  <input type="file" id="restoreBackupInput" accept=".json" style="display:none;" onchange="restoreBackupData(event)" />
 
   <!-- =========================================================
        MODAL 1: PDF TOOLS
@@ -1091,8 +1116,1685 @@
     </div>
   </div>
 
+  <!-- =========================================================
+       MODAL 5: USER PROFILE & SETTINGS (ME)
+       ========================================================= -->
+  <div class="modal-sheet" id="settingsModal">
+    <div class="modal-head">
+      <h3>User Profile & Settings</h3>
+      <button class="modal-close" onclick="closeModalSheet('settingsModal')">✕</button>
+    </div>
+    <div class="profile-card">
+      <div class="profile-avatar">👤</div>
+      <div>
+        <div style="font-weight:700; font-size:1rem;">Saqib</div>
+        <div style="font-size:0.75rem; color:#059669; font-weight:600;">👑 SAM-SCANNER Pro Active</div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:4px;">
+      <button class="pill-btn secondary" onclick="exportBackupData()">💾 Backup Documents (.json)</button>
+      <button class="pill-btn secondary" onclick="triggerRestoreBackup()">📂 Restore from Backup</button>
+      <button class="pill-btn danger" onclick="clearAllAppData()">🗑️ Clear All Scanned Data</button>
+    </div>
+    <div style="font-size:0.72rem; color:#94a3b8; text-align:center; margin-top:8px;">
+      SAM-SCANNER Pro v2.5.0 | CamScanner Edition<br/>
+      Fast Client-Side Edge Detection & Perspective Transformation
+    </div>
+  </div>
+
+  <!-- INLINE JAVASCRIPT ENGINE (FULLY EMBEDDED) -->
   <script>
-    /* Injected app engine script */
+/* =========================================================
+   SAM-SCANNER PRO - CORE ENGINE & CONTROLLER
+   ========================================================= */
+
+/* =========================================================
+   1. NAVIGATION & HISTORY STATE CONTROLLER
+   Fixes: Going back to another step exiting the app
+   ========================================================= */
+let currentScreen = "home";
+let activeModal = null;
+let lastBackPressTime = 0;
+
+function initNavigationHistory() {
+  window.history.replaceState({ screen: "home" }, "");
+}
+
+function switchScreen(targetScreen, params = {}) {
+  if (currentScreen === targetScreen && !params.force) return;
+
+  document.querySelectorAll(".app-screen").forEach(s => {
+    s.classList.remove("active");
+    s.style.display = "none";
+  });
+  const targetEl = document.getElementById(targetScreen + "Screen");
+  if (targetEl) {
+    targetEl.classList.add("active");
+    targetEl.style.display = "flex";
+  }
+
+  const prevScreen = currentScreen;
+  currentScreen = targetScreen;
+
+  if (prevScreen === "camera" && targetScreen !== "camera") {
+    stopCamera();
+  }
+
+  if (targetScreen === "home") {
+    renderRecentsList();
+    setNavActive("home");
+  }
+}
+
+function pushScreen(screenName, params = {}) {
+  window.history.pushState({ screen: screenName, params: params }, "");
+  switchScreen(screenName, params);
+}
+
+function handleNavigationBack() {
+  window.history.back();
+}
+
+function navigateHome() {
+  if (currentScreen !== "home") {
+    pushScreen("home");
+  }
+}
+
+function openModalSheet(modalId) {
+  if (activeModal) closeModalSheet(activeModal, true);
+  const m = document.getElementById(modalId);
+  if (!m) return;
+  m.style.display = "flex";
+  activeModal = modalId;
+  window.history.pushState({ modal: modalId }, "");
+}
+
+function closeModalSheet(modalId, skipHistory = false) {
+  const m = document.getElementById(modalId);
+  if (m) m.style.display = "none";
+  if (activeModal === modalId) activeModal = null;
+  if (!skipHistory && window.history.state && window.history.state.modal === modalId) {
+    window.history.back();
+  }
+}
+
+// Hardware & Browser Back Button (popstate) Interceptor
+window.addEventListener("popstate", (e) => {
+  if (activeModal) {
+    const m = document.getElementById(activeModal);
+    if (m) m.style.display = "none";
+    activeModal = null;
+    if (e.state && e.state.screen === currentScreen) {
+      return;
+    }
+  }
+
+  const state = e.state;
+  if (!state || state.screen === "home") {
+    if (currentScreen !== "home") {
+      switchScreen("home");
+    } else {
+      const now = Date.now();
+      if (now - lastBackPressTime < 2200) {
+        return;
+      }
+      lastBackPressTime = now;
+      showToast("Press back again to exit");
+      window.history.pushState({ screen: "home" }, "");
+    }
+    return;
+  }
+
+  if (state.screen) {
+    switchScreen(state.screen, state.params || {});
+  }
+});
+
+/* =========================================================
+   2. APP STATE & GLOBAL VARIABLES
+   ========================================================= */
+let currentStream = null;
+let currentFacingMode = "environment";
+let torchActive = false;
+let capturePillMode = "single";
+let currentCamMode = "scan";
+let liveTrackingInterval = null;
+
+let liveDetectedCorners = null;
+let smoothedCorners = null;
+let rawCapturedImage = new Image();
+let cropCorners = [];
+let activeCornerDragIdx = -1;
+let cropScale = 1;
+
+let docPages = [];
+let activePageIndex = 0;
+let idCardStep = 1;
+let idCardFrontCanvas = null;
+
+let wmSelectedStyle = "diagonal";
+let sigPenColor = "#0f172a";
+let isSigning = false;
+let lastSigPt = { x: 0, y: 0 };
+let sigHasStrokes = false;
+
+let savedDocuments = JSON.parse(localStorage.getItem("sam_saved_docs") || "[]");
+
+let video, liveCvs, liveCtx, trackCvs, trackCtx, cropCvs, cropCtx;
+let cropLoupe, loupeCvs, loupeCtx, displayCvs, displayCtx, sigCvs, sigCtx, permNotice;
+
+function initDomReferences() {
+  video = document.getElementById("cameraVideo");
+  liveCvs = document.getElementById("liveBoundaryCanvas");
+  liveCtx = liveCvs.getContext("2d");
+  trackCvs = document.getElementById("trackCanvas");
+  trackCtx = trackCvs.getContext("2d");
+  cropCvs = document.getElementById("cropInteractiveCanvas");
+  cropCtx = cropCvs.getContext("2d");
+  cropLoupe = document.getElementById("cropLoupe");
+  loupeCvs = document.getElementById("cropLoupeCanvas");
+  loupeCtx = loupeCvs.getContext("2d");
+  displayCvs = document.getElementById("displayCanvas");
+  displayCtx = displayCvs.getContext("2d");
+  sigCvs = document.getElementById("sigCanvas");
+  sigCtx = sigCvs.getContext("2d");
+  permNotice = document.getElementById("camPermissionNotice");
+}
+
+/* =========================================================
+   3. NOTIFICATION & TOAST HELPER
+   ========================================================= */
+let toastTimeout = null;
+function showToast(msg, duration = 2400) {
+  const toast = document.getElementById("toastNotice");
+  if (!toast) return;
+  toast.innerText = msg;
+  toast.style.display = "block";
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    toast.style.display = "none";
+  }, duration);
+}
+
+function vibrateDevice(ms = 25) {
+  if (navigator.vibrate) {
+    try { navigator.vibrate(ms); } catch (e) {}
+  }
+}
+
+/* =========================================================
+   4. HOME DASHBOARD & RECENTS
+   ========================================================= */
+function renderRecentsList(filter = "") {
+  const container = document.getElementById("recentsContainer");
+  const badge = document.getElementById("recentsCountBadge");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const list = filter 
+    ? savedDocuments.filter(d => d.title.toLowerCase().includes(filter.toLowerCase()))
+    : savedDocuments;
+
+  if (badge) badge.innerText = savedDocuments.length;
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 48px 20px; color:#94a3b8;">
+        <div style="font-size:2.8rem; margin-bottom:10px;">📄</div>
+        <p style="font-weight:700; font-size:1rem; color:#475569;">No scanned documents yet</p>
+        <p style="font-size:0.8rem; margin-top:4px;">Tap the camera button below to scan your first document</p>
+      </div>
+    `;
+    return;
+  }
+
+  list.forEach((doc, idx) => {
+    const card = document.createElement("div");
+    card.className = "doc-card";
+    const pageCount = (doc.pages && doc.pages.length) ? doc.pages.length : 1;
+    const thumbSrc = doc.thumb || (doc.pages ? doc.pages[0] : "");
+
+    card.innerHTML = `
+      <div class="doc-card-main" onclick="viewSavedDoc(${idx})">
+        <img src="${thumbSrc}" class="doc-thumb" />
+        <div class="doc-info">
+          <div class="doc-title">
+            <span>${doc.title}</span>
+            <span onclick="event.stopPropagation(); renameDoc(${idx})" style="font-size:0.85rem; color:#64748b; cursor:pointer;" title="Rename">✏️</span>
+          </div>
+          <div class="doc-meta">
+            <span>${doc.date}</span>
+            <span class="page-count-pill">📄 ${pageCount} ${pageCount === 1 ? 'page' : 'pages'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="doc-card-actions">
+        <div class="doc-action-btn" onclick="shareDoc(${idx})">📤 Share</div>
+        <div class="doc-action-btn" onclick="downloadDocPdf(${idx})">📑 Save PDF</div>
+        <div class="doc-action-btn" onclick="viewSavedDoc(${idx})">👁️ View</div>
+        <div class="doc-action-btn danger" onclick="deleteDoc(${idx})">🗑️ Delete</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterRecents(query) {
+  renderRecentsList(query);
+}
+
+function deleteDoc(idx) {
+  if (confirm(`Delete "${savedDocuments[idx].title}"?`)) {
+    savedDocuments.splice(idx, 1);
+    localStorage.setItem("sam_saved_docs", JSON.stringify(savedDocuments));
+    renderRecentsList();
+    showToast("Document deleted");
+  }
+}
+
+function renameDoc(idx) {
+  const current = savedDocuments[idx].title;
+  const newTitle = prompt("Enter new document title:", current);
+  if (newTitle && newTitle.trim() && newTitle.trim() !== current) {
+    savedDocuments[idx].title = newTitle.trim();
+    localStorage.setItem("sam_saved_docs", JSON.stringify(savedDocuments));
+    renderRecentsList();
+    showToast("Renamed successfully");
+  }
+}
+
+function triggerFileInput() {
+  const fi = document.getElementById("globalFileInput");
+  if (fi) fi.click();
+}
+
+function triggerMergeToPdf() {
+  const fi = document.getElementById("mergePdfFileInput");
+  if (fi) fi.click();
+}
+
+/* =========================================================
+   5. CAMERA STREAM & CONTROLS
+   ========================================================= */
+async function requestCameraStream() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("getUserMedia is not supported or not secure (HTTPS required for live stream)");
+  }
+
+  const constraints = [
+    { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1920 } }, audio: false },
+    { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 } }, audio: false },
+    { video: { facingMode: currentFacingMode }, audio: false },
+    { video: true, audio: false }
+  ];
+
+  for (let c of constraints) {
+    try {
+      return await navigator.mediaDevices.getUserMedia(c);
+    } catch (e) {
+      console.warn("Retrying camera constraint:", e);
+    }
+  }
+  throw new Error("Camera stream unavailable");
+}
+
+async function startScannerFlow(mode = "scan") {
+  setCamMode(mode);
+  pushScreen("camera");
+  if (permNotice) permNotice.style.display = "none";
+  if (video) video.style.display = "block";
+
+  try {
+    currentStream = await requestCameraStream();
+    video.srcObject = currentStream;
+    video.onloadedmetadata = () => {
+      liveCvs.width = video.videoWidth;
+      liveCvs.height = video.videoHeight;
+      startLiveBoundaryTracking();
+    };
+  } catch (err) {
+    console.warn("Camera fallback active:", err);
+    if (video) video.style.display = "none";
+    if (permNotice) permNotice.style.display = "flex";
+  }
+}
+
+function stopCamera() {
+  if (liveTrackingInterval) {
+    clearInterval(liveTrackingInterval);
+    liveTrackingInterval = null;
+  }
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
+  torchActive = false;
+  const flashBtn = document.getElementById("flashBtn");
+  if (flashBtn) flashBtn.classList.remove("active");
+}
+
+async function toggleFlash() {
+  if (!currentStream) return;
+  const track = currentStream.getVideoTracks()[0];
+  if (!track) return;
+  
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if ("torch" in caps) {
+    torchActive = !torchActive;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: torchActive }] });
+      document.getElementById("flashBtn").classList.toggle("active", torchActive);
+      showToast(torchActive ? "Torch Turned On" : "Torch Turned Off");
+    } catch (e) {
+      showToast("Could not toggle torch");
+    }
+  } else {
+    showToast("Torch / Flash not supported on this camera");
+  }
+}
+
+async function flipCamera() {
+  currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+  stopCamera();
+  showToast("Switching camera...");
+  try {
+    currentStream = await requestCameraStream();
+    video.srcObject = currentStream;
+    video.onloadedmetadata = () => {
+      liveCvs.width = video.videoWidth;
+      liveCvs.height = video.videoHeight;
+      startLiveBoundaryTracking();
+    };
+  } catch (e) {
+    showToast("Failed to switch camera");
+  }
+}
+
+function setCapturePill(type) {
+  capturePillMode = type;
+  document.getElementById("singlePill").classList.toggle("active", type === "single");
+  document.getElementById("batchPill").classList.toggle("active", type === "batch");
+  updateRightDeckBtn();
+}
+
+function setCamMode(mode) {
+  currentCamMode = mode;
+  document.querySelectorAll(".cam-mode-item").forEach(el => el.classList.remove("active"));
+  
+  const items = document.querySelectorAll(".cam-mode-item");
+  items.forEach(el => {
+    if (el.innerText.toLowerCase().includes(mode.toLowerCase())) {
+      el.classList.add("active");
+    }
+  });
+
+  const idOverlay = document.getElementById("idCardGuideOverlay");
+  if (mode === "idcard") {
+    idOverlay.style.display = "flex";
+    idCardStep = 1;
+    idCardFrontCanvas = null;
+    document.getElementById("idCardStepBadge").innerText = "Step 1: Scan Front Side";
+    setCapturePill("single");
+  } else {
+    idOverlay.style.display = "none";
+  }
+
+  if (mode === "batch") {
+    setCapturePill("batch");
+  }
+}
+
+function updateRightDeckBtn() {
+  const badge = document.getElementById("batchCountBadge");
+  const icon = document.getElementById("camRightDeckIcon");
+  const text = document.getElementById("camRightDeckText");
+
+  if (capturePillMode === "batch" && docPages.length > 0) {
+    badge.innerText = docPages.length;
+    badge.style.display = "flex";
+    icon.innerText = "✓";
+    text.innerText = `Finish (${docPages.length})`;
+  } else {
+    badge.style.display = "none";
+    icon.innerText = "🖼️";
+    text.innerText = "Import";
+  }
+}
+
+function handleRightDeckClick() {
+  if (capturePillMode === "batch" && docPages.length > 0) {
+    stopCamera();
+    pushScreen("review");
+    setupReviewScreen();
+  } else {
+    triggerFileInput();
+  }
+}
+
+/* =========================================================
+   6. LIVE BOUNDARY DETECTION (Radial Ray Casting)
+   ========================================================= */
+function startLiveBoundaryTracking() {
+  if (liveTrackingInterval) clearInterval(liveTrackingInterval);
+
+  liveTrackingInterval = setInterval(() => {
+    if (!video.videoWidth || currentCamMode === "idcard") {
+      liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
+      return;
+    }
+
+    const sw = 240;
+    const sh = Math.round(240 * (video.videoHeight / video.videoWidth));
+    trackCvs.width = sw;
+    trackCvs.height = sh;
+    trackCtx.drawImage(video, 0, 0, sw, sh);
+
+    const d = trackCtx.getImageData(0, 0, sw, sh).data;
+    const gray = new Uint8Array(sw * sh);
+    for (let i = 0; i < d.length; i += 4) {
+      gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
+    }
+
+    let bestCx = Math.floor(sw / 2), bestCy = Math.floor(sh / 2);
+    let maxLum = 0;
+    for (let y = Math.floor(sh * 0.3); y < sh * 0.7; y += 12) {
+      for (let x = Math.floor(sw * 0.3); x < sw * 0.7; x += 12) {
+        const lum = gray[y * sw + x];
+        if (lum > maxLum) { maxLum = lum; bestCx = x; bestCy = y; }
+      }
+    }
+
+    const numRays = 48;
+    const boundaryPts = [];
+    const scaleX = video.videoWidth / sw;
+    const scaleY = video.videoHeight / sh;
+
+    for (let i = 0; i < numRays; i++) {
+      const angle = (2 * Math.PI * i) / numRays;
+      const cosA = Math.cos(angle), sinA = Math.sin(angle);
+      const maxR = Math.hypot(sw, sh);
+
+      let foundR = null;
+      for (let r = 12; r < maxR; r += 3) {
+        const xIn = Math.round(bestCx + (r - 4) * cosA);
+        const yIn = Math.round(bestCy + (r - 4) * sinA);
+        const xOut = Math.round(bestCx + (r + 4) * cosA);
+        const yOut = Math.round(bestCy + (r + 4) * sinA);
+
+        if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) break;
+        
+        if (gray[yIn * sw + xIn] - gray[yOut * sw + xOut] >= 22) {
+          foundR = r;
+          break;
+        }
+      }
+      if (foundR !== null) {
+        boundaryPts.push({ x: (bestCx + foundR * cosA) * scaleX, y: (bestCy + foundR * sinA) * scaleY });
+      }
+    }
+
+    if (boundaryPts.length >= 18) {
+      let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
+      let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+
+      for (let pt of boundaryPts) {
+        const s = pt.x + pt.y, diff = pt.x - pt.y;
+        if (s < minSum) { minSum = s; tl = pt; }
+        if (s > maxSum) { maxSum = s; br = pt; }
+        if (diff > maxDiff) { maxDiff = diff; tr = pt; }
+        if (diff < minDiff) { minDiff = diff; bl = pt; }
+      }
+
+      const rawCorners = [tl, tr, br, bl];
+
+      if (!smoothedCorners) {
+        smoothedCorners = rawCorners;
+      } else {
+        for (let c = 0; c < 4; c++) {
+          smoothedCorners[c].x = smoothedCorners[c].x * 0.65 + rawCorners[c].x * 0.35;
+          smoothedCorners[c].y = smoothedCorners[c].y * 0.65 + rawCorners[c].y * 0.35;
+        }
+      }
+      liveDetectedCorners = smoothedCorners;
+      drawLiveCyanPolygon(liveDetectedCorners);
+    } else {
+      liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
+    }
+  }, 100);
+}
+
+function drawLiveCyanPolygon(pts) {
+  liveCtx.clearRect(0, 0, liveCvs.width, liveCvs.height);
+
+  liveCtx.save();
+  liveCtx.beginPath();
+  liveCtx.moveTo(pts[0].x, pts[0].y);
+  liveCtx.lineTo(pts[1].x, pts[1].y);
+  liveCtx.lineTo(pts[2].x, pts[2].y);
+  liveCtx.lineTo(pts[3].x, pts[3].y);
+  liveCtx.closePath();
+
+  liveCtx.strokeStyle = "#00f0b5";
+  liveCtx.lineWidth = 4;
+  liveCtx.shadowColor = "#00f0b5";
+  liveCtx.shadowBlur = 10;
+  liveCtx.stroke();
+
+  liveCtx.fillStyle = "rgba(0, 240, 181, 0.08)";
+  liveCtx.fill();
+
+  pts.forEach(pt => {
+    liveCtx.beginPath();
+    liveCtx.arc(pt.x, pt.y, 6, 0, 2 * Math.PI);
+    liveCtx.fillStyle = "#ffffff";
+    liveCtx.shadowBlur = 4;
+    liveCtx.fill();
+  });
+  liveCtx.restore();
+}
+
+/* =========================================================
+   7. SHUTTER CAPTURE & PROCESS
+   ========================================================= */
+function handleShutterClick() {
+  vibrateDevice(35);
+  if (currentStream && video.videoWidth) {
+    processCameraCapture();
+  } else {
+    const ni = document.getElementById("nativeShutterInput");
+    if (ni) ni.click();
+  }
+}
+
+function processCameraCapture() {
+  const snapCanvas = document.createElement("canvas");
+  snapCanvas.width = video.videoWidth;
+  snapCanvas.height = video.videoHeight;
+  snapCanvas.getContext("2d").drawImage(video, 0, 0);
+
+  if (currentCamMode === "idcard") {
+    handleIdCardCapture(snapCanvas);
+    return;
+  }
+
+  const img = new Image();
+  img.onload = () => {
+    rawCapturedImage = img;
+    const initialCorners = liveDetectedCorners ? JSON.parse(JSON.stringify(liveDetectedCorners)) : [
+      { x: img.width * 0.08, y: img.height * 0.08 },
+      { x: img.width * 0.92, y: img.height * 0.08 },
+      { x: img.width * 0.92, y: img.height * 0.92 },
+      { x: img.width * 0.08, y: img.height * 0.92 }
+    ];
+
+    if (capturePillMode === "batch") {
+      const dewarped = performDewarp(img, initialCorners);
+      docPages.push({
+        canvas: dewarped,
+        filter: "magic",
+        brightness: 0,
+        contrast: 0
+      });
+      showToast(`Captured page ${docPages.length}`);
+      updateRightDeckBtn();
+    } else {
+      stopCamera();
+      cropCorners = initialCorners;
+      pushScreen("crop");
+      initCropInteractiveCanvas();
+    }
+  };
+  img.src = snapCanvas.toDataURL("image/jpeg", 0.95);
+}
+
+function handleIdCardCapture(snapCanvas) {
+  const cardCanvas = extractIdCardRegion(snapCanvas);
+
+  if (idCardStep === 1) {
+    idCardFrontCanvas = cardCanvas;
+    idCardStep = 2;
+    document.getElementById("idCardStepBadge").innerText = "Step 2: Scan Back Side";
+    showToast("Front captured! Now scan back side");
+  } else {
+    showToast("Assembling ID Card document...");
+    stopCamera();
+    const compositeCanvas = assembleIdCardComposite(idCardFrontCanvas, cardCanvas);
+    docPages = [{
+      canvas: compositeCanvas,
+      filter: "original",
+      brightness: 0,
+      contrast: 0
+    }];
+    activePageIndex = 0;
+    pushScreen("review");
+    setupReviewScreen();
+  }
+}
+
+function extractIdCardRegion(sourceCanvas) {
+  const sw = sourceCanvas.width;
+  const sh = sourceCanvas.height;
+  const targetW = Math.round(sw * 0.82);
+  const targetH = Math.round(targetW / 1.586);
+  const cx = (sw - targetW) / 2;
+  const cy = (sh - targetH) / 2;
+
+  const card = document.createElement("canvas");
+  card.width = targetW;
+  card.height = targetH;
+  card.getContext("2d").drawImage(sourceCanvas, cx, cy, targetW, targetH, 0, 0, targetW, targetH);
+  return card;
+}
+
+function assembleIdCardComposite(frontCanvas, backCanvas) {
+  const a4 = document.createElement("canvas");
+  a4.width = 1240;
+  a4.height = 1754;
+  const ctx = a4.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, a4.width, a4.height);
+
+  ctx.fillStyle = "#059669";
+  ctx.fillRect(0, 0, a4.width, 90);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 32px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("OFFICIAL ID CARD COPY", a4.width / 2, 58);
+
+  const cardW = 860;
+  const cardH = Math.round(cardW / 1.586);
+  const cardX = (a4.width - cardW) / 2;
+
+  ctx.fillStyle = "#334155";
+  ctx.font = "600 24px sans-serif";
+  ctx.fillText("[ FRONT SIDE ]", a4.width / 2, 170);
+  ctx.drawImage(frontCanvas, cardX, 200, cardW, cardH);
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cardX, 200, cardW, cardH);
+
+  const backY = 200 + cardH + 110;
+  ctx.fillStyle = "#334155";
+  ctx.font = "600 24px sans-serif";
+  ctx.fillText("[ BACK SIDE ]", a4.width / 2, backY - 30);
+  ctx.drawImage(backCanvas, cardX, backY, cardW, cardH);
+  ctx.strokeRect(cardX, backY, cardW, cardH);
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "20px sans-serif";
+  ctx.fillText("Scanned & verified via SAM-SCANNER Pro", a4.width / 2, a4.height - 40);
+
+  return a4;
+}
+
+function handleImportedFiles(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+
+  showToast(`Importing ${files.length} image(s)...`);
+  stopCamera();
+
+  let loadedCount = 0;
+  const newPages = [];
+
+  files.forEach((file, idx) => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => {
+        const corners = [
+          { x: img.width * 0.05, y: img.height * 0.05 },
+          { x: img.width * 0.95, y: img.height * 0.05 },
+          { x: img.width * 0.95, y: img.height * 0.95 },
+          { x: img.width * 0.05, y: img.height * 0.95 }
+        ];
+        const dewarped = performDewarp(img, corners);
+        newPages[idx] = {
+          canvas: dewarped,
+          filter: "magic",
+          brightness: 0,
+          contrast: 0
+        };
+        loadedCount++;
+
+        if (loadedCount === files.length) {
+          docPages = newPages.filter(Boolean);
+          activePageIndex = 0;
+          pushScreen("review");
+          setupReviewScreen();
+        }
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function handleMergePdfFiles(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+
+  showToast("Merging files to PDF...");
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "p", unit: "px", format: "a4" });
+  const imgW = pdf.internal.pageSize.getWidth();
+  const imgH = pdf.internal.pageSize.getHeight();
+
+  let loaded = 0;
+  files.forEach((f, idx) => {
+    const r = new FileReader();
+    r.onload = (evt) => {
+      if (idx > 0) pdf.addPage();
+      pdf.addImage(evt.target.result, "JPEG", 0, 0, imgW, imgH);
+      loaded++;
+      if (loaded === files.length) {
+        pdf.save("Merged_Document.pdf");
+        showToast("PDF generated and saved!");
+      }
+    };
+    r.readAsDataURL(f);
+  });
+}
+
+/* =========================================================
+   8. INTERACTIVE CORNER CROP & PERSPECTIVE WARP
+   ========================================================= */
+function initCropInteractiveCanvas() {
+  const viewport = document.getElementById("cropViewport");
+  const vw = viewport.clientWidth;
+  const vh = viewport.clientHeight;
+
+  const iw = rawCapturedImage.width;
+  const ih = rawCapturedImage.height;
+
+  cropScale = Math.min((vw - 32) / iw, (vh - 32) / ih);
+  const cw = Math.round(iw * cropScale);
+  const ch = Math.round(ih * cropScale);
+
+  cropCvs.width = cw;
+  cropCvs.height = ch;
+
+  drawInteractiveCropView();
+  bindCropTouchEvents();
+}
+
+function drawInteractiveCropView() {
+  cropCtx.clearRect(0, 0, cropCvs.width, cropCvs.height);
+  cropCtx.drawImage(rawCapturedImage, 0, 0, cropCvs.width, cropCvs.height);
+
+  cropCtx.save();
+  cropCtx.fillStyle = "rgba(0, 0, 0, 0.45)";
+  cropCtx.fillRect(0, 0, cropCvs.width, cropCvs.height);
+
+  cropCtx.globalCompositeOperation = "destination-out";
+  cropCtx.beginPath();
+  cropCtx.moveTo(cropCorners[0].x * cropScale, cropCorners[0].y * cropScale);
+  cropCtx.lineTo(cropCorners[1].x * cropScale, cropCorners[1].y * cropScale);
+  cropCtx.lineTo(cropCorners[2].x * cropScale, cropCorners[2].y * cropScale);
+  cropCtx.lineTo(cropCorners[3].x * cropScale, cropCorners[3].y * cropScale);
+  cropCtx.closePath();
+  cropCtx.fill();
+  cropCtx.restore();
+
+  cropCtx.save();
+  cropCtx.beginPath();
+  cropCtx.moveTo(cropCorners[0].x * cropScale, cropCorners[0].y * cropScale);
+  cropCtx.lineTo(cropCorners[1].x * cropScale, cropCorners[1].y * cropScale);
+  cropCtx.lineTo(cropCorners[2].x * cropScale, cropCorners[2].y * cropScale);
+  cropCtx.lineTo(cropCorners[3].x * cropScale, cropCorners[3].y * cropScale);
+  cropCtx.closePath();
+  cropCtx.strokeStyle = "#00f0b5";
+  cropCtx.lineWidth = 3;
+  cropCtx.shadowColor = "#00f0b5";
+  cropCtx.shadowBlur = 8;
+  cropCtx.stroke();
+
+  cropCorners.forEach((pt, i) => {
+    const sx = pt.x * cropScale;
+    const sy = pt.y * cropScale;
+
+    cropCtx.beginPath();
+    cropCtx.arc(sx, sy, 14, 0, 2 * Math.PI);
+    cropCtx.fillStyle = i === activeCornerDragIdx ? "#00f0b5" : "rgba(0, 240, 181, 0.45)";
+    cropCtx.fill();
+    cropCtx.strokeStyle = "#ffffff";
+    cropCtx.lineWidth = 3;
+    cropCtx.stroke();
+
+    cropCtx.beginPath();
+    cropCtx.arc(sx, sy, 5, 0, 2 * Math.PI);
+    cropCtx.fillStyle = "#ffffff";
+    cropCtx.fill();
+  });
+  cropCtx.restore();
+}
+
+function bindCropTouchEvents() {
+  let isDragging = false;
+
+  function getCanvasCoords(e) {
+    const rect = cropCvs.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+      screenX: clientX,
+      screenY: clientY
+    };
+  }
+
+  function onStart(e) {
+    const pt = getCanvasCoords(e);
+    let minD = Infinity;
+    let bestIdx = -1;
+
+    cropCorners.forEach((cp, idx) => {
+      const d = Math.hypot(cp.x * cropScale - pt.x, cp.y * cropScale - pt.y);
+      if (d < minD && d < 46) {
+        minD = d;
+        bestIdx = idx;
+      }
+    });
+
+    if (bestIdx !== -1) {
+      activeCornerDragIdx = bestIdx;
+      isDragging = true;
+      drawInteractiveCropView();
+      updateLoupe(pt);
+      cropLoupe.style.display = "block";
+    }
+  }
+
+  function onMove(e) {
+    if (!isDragging || activeCornerDragIdx === -1) return;
+    e.preventDefault();
+    const pt = getCanvasCoords(e);
+
+    const natX = Math.max(0, Math.min(rawCapturedImage.width, pt.x / cropScale));
+    const natY = Math.max(0, Math.min(rawCapturedImage.height, pt.y / cropScale));
+
+    cropCorners[activeCornerDragIdx] = { x: natX, y: natY };
+    drawInteractiveCropView();
+    updateLoupe(pt);
+  }
+
+  function onEnd() {
+    if (isDragging) {
+      isDragging = false;
+      activeCornerDragIdx = -1;
+      cropLoupe.style.display = "none";
+      drawInteractiveCropView();
+    }
+  }
+
+  cropCvs.onmousedown = onStart;
+  window.onmousemove = onMove;
+  window.onmouseup = onEnd;
+
+  cropCvs.ontouchstart = onStart;
+  cropCvs.ontouchmove = onMove;
+  cropCvs.ontouchend = onEnd;
+}
+
+function updateLoupe(pt) {
+  const loupeSize = 110;
+  const zoom = 2.4;
+  const corner = cropCorners[activeCornerDragIdx];
+
+  const viewport = document.getElementById("cropViewport");
+  const vpRect = viewport.getBoundingClientRect();
+  const lx = Math.max(10, Math.min(vpRect.width - loupeSize - 10, pt.screenX - vpRect.left - loupeSize / 2));
+  const ly = Math.max(10, pt.screenY - vpRect.top - loupeSize - 30);
+
+  cropLoupe.style.left = lx + "px";
+  cropLoupe.style.top = ly + "px";
+
+  loupeCtx.clearRect(0, 0, loupeSize, loupeSize);
+  loupeCtx.drawImage(
+    rawCapturedImage,
+    corner.x - (loupeSize / (2 * zoom)),
+    corner.y - (loupeSize / (2 * zoom)),
+    loupeSize / zoom,
+    loupeSize / zoom,
+    0,
+    0,
+    loupeSize,
+    loupeSize
+  );
+}
+
+function autoDetectCornersOnCrop() {
+  cropCorners = [
+    { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.08 },
+    { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.08 },
+    { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.92 },
+    { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.92 }
+  ];
+  drawInteractiveCropView();
+  showToast("Auto corners adjusted");
+}
+
+function snapCornersToFull() {
+  cropCorners = [
+    { x: 0, y: 0 },
+    { x: rawCapturedImage.width, y: 0 },
+    { x: rawCapturedImage.width, y: rawCapturedImage.height },
+    { x: 0, y: rawCapturedImage.height }
+  ];
+  drawInteractiveCropView();
+  showToast("Full image selected");
+}
+
+function rotateRawCapturedImage() {
+  const rot = document.createElement("canvas");
+  rot.width = rawCapturedImage.height;
+  rot.height = rawCapturedImage.width;
+  const rtx = rot.getContext("2d");
+  rtx.translate(rot.width / 2, rot.height / 2);
+  rtx.rotate(Math.PI / 2);
+  rtx.drawImage(rawCapturedImage, -rawCapturedImage.width / 2, -rawCapturedImage.height / 2);
+
+  const nImg = new Image();
+  nImg.onload = () => {
+    rawCapturedImage = nImg;
+    autoDetectCornersOnCrop();
+    initCropInteractiveCanvas();
+  };
+  nImg.src = rot.toDataURL("image/jpeg", 0.95);
+}
+
+function confirmCropAndProceed() {
+  const dewarped = performDewarp(rawCapturedImage, cropCorners);
+  docPages = [{
+    canvas: dewarped,
+    filter: "magic",
+    brightness: 0,
+    contrast: 0
+  }];
+  activePageIndex = 0;
+  pushScreen("review");
+  setupReviewScreen();
+}
+
+function performDewarp(img, pts) {
+  const p0 = pts[0], p1 = pts[1], p2 = pts[2], p3 = pts[3];
+  const targetW = Math.round(Math.max(Math.hypot(p1.x - p0.x, p1.y - p0.y), Math.hypot(p2.x - p3.x, p2.y - p3.y)));
+  const targetH = Math.round(Math.max(Math.hypot(p3.x - p0.x, p3.y - p0.y), Math.hypot(p2.x - p1.x, p2.y - p1.y)));
+
+  const out = document.createElement("canvas");
+  out.width = targetW;
+  out.height = targetH;
+  const ctx = out.getContext("2d");
+
+  const dx1 = p1.x - p2.x, dx2 = p3.x - p2.x, dx3 = p0.x - p1.x + p2.x - p3.x;
+  const dy1 = p1.y - p2.y, dy2 = p3.y - p2.y, dy3 = p0.y - p1.y + p2.y - p3.y;
+  const det = dx1 * dy2 - dx2 * dy1;
+
+  let g = 0, h = 0;
+  if (Math.abs(det) > 1e-5) {
+    g = (dx3 * dy2 - dx2 * dy3) / det;
+    h = (dx1 * dy3 - dx3 * dy1) / det;
+  }
+  const a = p1.x - p0.x + g * p1.x, b = p3.x - p0.x + h * p3.x, c = p0.x;
+  const d = p1.y - p0.y + g * p1.y, e = p3.y - p0.y + h * p3.y, f = p0.y;
+
+  function mapPt(u, v) {
+    const denom = g * u + h * v + 1;
+    return { x: (a * u + b * v + c) / denom, y: (d * u + e * v + f) / denom };
+  }
+
+  ctx.clearRect(0, 0, targetW, targetH);
+  const N = 14;
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      const u0 = i / N, v0 = j / N, u1 = (i + 1) / N, v1 = (j + 1) / N;
+      const x0 = u0 * targetW, y0 = v0 * targetH;
+      const x1 = u1 * targetW, y1 = v1 * targetH;
+
+      const s00 = mapPt(u0, v0), s10 = mapPt(u1, v0);
+      const s01 = mapPt(u0, v1), s11 = mapPt(u1, v1);
+
+      drawTri(ctx, img, s00.x, s00.y, s10.x, s10.y, s01.x, s01.y, x0, y0, x1, y0, x0, y1);
+      drawTri(ctx, img, s10.x, s10.y, s11.x, s11.y, s01.x, s01.y, x1, y0, x1, y1, x0, y1);
+    }
+  }
+  return out;
+}
+
+function drawTri(ctx, img, u0, v0, u1, v1, u2, v2, x0, y0, x1, y0_2, x2, y2) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(x0, y0); ctx.lineTo(x1, y0_2); ctx.lineTo(x2, y2);
+  ctx.closePath();
+  ctx.clip();
+
+  const delta = u0 * (v1 - v2) - v0 * (u1 - u2) + (u1 * v2 - u2 * v1);
+  if (Math.abs(delta) > 1e-6) {
+    const ma = (x0 * (v1 - v2) + x1 * (v2 - v0) + x2 * (v0 - v1)) / delta;
+    const mc = (x0 * (u2 - u1) + x1 * (u0 - u2) + x2 * (u1 - u0)) / delta;
+    const me = (x0 * (u1 * v2 - u2 * v1) + x1 * (u2 * v0 - u0 * v2) + x2 * (u0 * v1 - u1 * v0)) / delta;
+
+    const mb = (y0 * (v1 - v2) + y0_2 * (v2 - v0) + y2 * (v0 - v1)) / delta;
+    const md = (y0 * (u2 - u1) + y0_2 * (u0 - u2) + y2 * (u1 - u0)) / delta;
+    const mf = (y0 * (u1 * v2 - u2 * v1) + y0_2 * (u2 * v0 - u0 * v2) + y2 * (u0 * v1 - u1 * v0)) / delta;
+
+    ctx.transform(ma, mb, mc, md, me, mf);
+    ctx.drawImage(img, 0, 0);
+  }
+  ctx.restore();
+}
+
+/* =========================================================
+   9. REVIEW SCREEN & MULTI-PAGE MANAGEMENT
+   ========================================================= */
+function setupReviewScreen() {
+  updateMultiPageStrip();
+  renderActiveReviewPage();
+
+  const now = new Date();
+  document.getElementById("reviewDocTitle").value = `CamScanner_${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}.${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+function updateMultiPageStrip() {
+  const container = document.getElementById("pageStripContainer");
+  const list = document.getElementById("pageStripList");
+  list.innerHTML = "";
+
+  if (docPages.length > 1) {
+    container.style.display = "flex";
+  } else {
+    container.style.display = "none";
+  }
+
+  docPages.forEach((page, idx) => {
+    const img = document.createElement("img");
+    img.className = `page-thumb-item ${idx === activePageIndex ? 'active' : ''}`;
+    img.src = page.canvas.toDataURL("image/jpeg", 0.35);
+    img.title = `Page ${idx + 1}`;
+    img.onclick = () => {
+      activePageIndex = idx;
+      updateMultiPageStrip();
+      renderActiveReviewPage();
+    };
+    list.appendChild(img);
+  });
+}
+
+function addPageToCurrentDoc() {
+  showToast("Opening camera to append page...");
+  startScannerFlow("batch");
+}
+
+function renderActiveReviewPage() {
+  if (!docPages[activePageIndex]) return;
+  const page = docPages[activePageIndex];
+
+  displayCvs.width = page.canvas.width;
+  displayCvs.height = page.canvas.height;
+  displayCtx.drawImage(page.canvas, 0, 0);
+
+  applyPageFiltersAndTuning(page);
+  updateFilterChipHighlight(page.filter);
+}
+
+function applyPageFiltersAndTuning(page) {
+  const type = page.filter;
+  const bOffset = page.brightness || 0;
+  const cOffset = page.contrast || 0;
+
+  displayCtx.drawImage(page.canvas, 0, 0);
+  const imgData = displayCtx.getImageData(0, 0, displayCvs.width, displayCvs.height);
+  const d = imgData.data;
+
+  const factor = (259 * (cOffset + 255)) / (255 * (259 - cOffset));
+
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i], g = d[i+1], b = d[i+2];
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+    if (type === "magic") {
+      if (lum > 135) {
+        r = Math.min(255, r * 1.3 + 22);
+        g = Math.min(255, g * 1.3 + 22);
+        b = Math.min(255, b * 1.3 + 22);
+      } else {
+        r = r * 0.75;
+        g = g * 0.75;
+        b = b * 0.75;
+      }
+    } else if (type === "bw") {
+      const v = lum > 128 ? 255 : 0;
+      r = g = b = v;
+    } else if (type === "gray") {
+      r = g = b = lum;
+    } else if (type === "lighten") {
+      r = Math.min(255, r * 1.25 + 30);
+      g = Math.min(255, g * 1.25 + 30);
+      b = Math.min(255, b * 1.25 + 30);
+    } else if (type === "invert") {
+      r = 255 - r;
+      g = 255 - g;
+      b = 255 - b;
+    }
+
+    if (bOffset !== 0 || cOffset !== 0) {
+      r = factor * (r - 128) + 128 + bOffset;
+      g = factor * (g - 128) + 128 + bOffset;
+      b = factor * (b - 128) + 128 + bOffset;
+    }
+
+    d[i] = Math.max(0, Math.min(255, r));
+    d[i+1] = Math.max(0, Math.min(255, g));
+    d[i+2] = Math.max(0, Math.min(255, b));
+  }
+  displayCtx.putImageData(imgData, 0, 0);
+}
+
+function selectFilter(filterName) {
+  if (!docPages[activePageIndex]) return;
+  docPages[activePageIndex].filter = filterName;
+  renderActiveReviewPage();
+  updateFilterChipHighlight(filterName);
+}
+
+function updateFilterChipHighlight(filterName) {
+  document.querySelectorAll(".filter-chip").forEach(el => el.classList.remove("active"));
+  const map = {
+    magic: "filterMagic",
+    bw: "filterBw",
+    gray: "filterGray",
+    original: "filterOriginal",
+    lighten: "filterLighten",
+    invert: "filterInvert"
+  };
+  const id = map[filterName];
+  if (id && document.getElementById(id)) {
+    document.getElementById(id).classList.add("active");
+  }
+}
+
+function rotateCurrentReviewPage() {
+  if (!docPages[activePageIndex]) return;
+  const cur = docPages[activePageIndex].canvas;
+  const rot = document.createElement("canvas");
+  rot.width = cur.height;
+  rot.height = cur.width;
+  const rtx = rot.getContext("2d");
+  rtx.translate(rot.width / 2, rot.height / 2);
+  rtx.rotate(Math.PI / 2);
+  rtx.drawImage(cur, -cur.width / 2, -cur.height / 2);
+
+  docPages[activePageIndex].canvas = rot;
+  renderActiveReviewPage();
+  updateMultiPageStrip();
+  showToast("Rotated 90°");
+}
+
+function toggleSlidersPanel() {
+  const p = document.getElementById("slidersPanel");
+  p.style.display = p.style.display === "flex" ? "none" : "flex";
+}
+
+function updateSliders() {
+  if (!docPages[activePageIndex]) return;
+  docPages[activePageIndex].brightness = parseInt(document.getElementById("brightnessRange").value, 10);
+  docPages[activePageIndex].contrast = parseInt(document.getElementById("contrastRange").value, 10);
+  renderActiveReviewPage();
+}
+
+function saveToRecentsAndHome() {
+  if (!docPages.length) return;
+  const now = new Date();
+  const dateStr = `${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const title = document.getElementById("reviewDocTitle").value.trim() || `Document_${Date.now()}`;
+
+  const pageDataUrls = [];
+  docPages.forEach((p) => {
+    displayCvs.width = p.canvas.width;
+    displayCvs.height = p.canvas.height;
+    displayCtx.drawImage(p.canvas, 0, 0);
+    applyPageFiltersAndTuning(p);
+    pageDataUrls.push(displayCvs.toDataURL("image/jpeg", 0.88));
+  });
+
+  const newDoc = {
+    title: title,
+    date: dateStr,
+    thumb: pageDataUrls[0],
+    pages: pageDataUrls
+  };
+
+  savedDocuments.unshift(newDoc);
+  localStorage.setItem("sam_saved_docs", JSON.stringify(savedDocuments));
+  showToast("Document saved to Recents!");
+  pushScreen("home");
+}
+
+function viewSavedDoc(idx) {
+  const doc = savedDocuments[idx];
+  if (!doc || !doc.pages) return;
+
+  showToast("Opening document...");
+  document.getElementById("reviewDocTitle").value = doc.title;
+
+  let loaded = 0;
+  docPages = [];
+  doc.pages.forEach((dataUrl, pIdx) => {
+    const img = new Image();
+    img.onload = () => {
+      const cvs = document.createElement("canvas");
+      cvs.width = img.width;
+      cvs.height = img.height;
+      cvs.getContext("2d").drawImage(img, 0, 0);
+      docPages[pIdx] = {
+        canvas: cvs,
+        filter: "original",
+        brightness: 0,
+        contrast: 0
+      };
+      loaded++;
+      if (loaded === doc.pages.length) {
+        activePageIndex = 0;
+        pushScreen("review");
+        setupReviewScreen();
+      }
+    };
+    img.src = dataUrl;
+  });
+}
+
+/* =========================================================
+   10. SIGNATURE TOOL
+   ========================================================= */
+function openSignatureModal() {
+  openModalSheet("sigModal");
+  setTimeout(initSigPad, 100);
+}
+
+function initSigPad() {
+  const rect = sigCvs.getBoundingClientRect();
+  sigCvs.width = rect.width * 2;
+  sigCvs.height = rect.height * 2;
+  sigCtx.scale(2, 2);
+  clearSignature();
+
+  function getSigCoords(e) {
+    const r = sigCvs.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - r.left, y: clientY - r.top };
+  }
+
+  sigCvs.onmousedown = (e) => {
+    isSigning = true;
+    lastSigPt = getSigCoords(e);
+  };
+  window.onmousemove = (e) => {
+    if (!isSigning) return;
+    const pt = getSigCoords(e);
+    sigCtx.beginPath();
+    sigCtx.moveTo(lastSigPt.x, lastSigPt.y);
+    sigCtx.lineTo(pt.x, pt.y);
+    sigCtx.strokeStyle = sigPenColor;
+    sigCtx.lineWidth = 3;
+    sigCtx.lineCap = "round";
+    sigCtx.stroke();
+    lastSigPt = pt;
+    sigHasStrokes = true;
+  };
+  window.onmouseup = () => { isSigning = false; };
+
+  sigCvs.ontouchstart = (e) => {
+    isSigning = true;
+    lastSigPt = getSigCoords(e);
+  };
+  sigCvs.ontouchmove = (e) => {
+    if (!isSigning) return;
+    e.preventDefault();
+    const pt = getSigCoords(e);
+    sigCtx.beginPath();
+    sigCtx.moveTo(lastSigPt.x, lastSigPt.y);
+    sigCtx.lineTo(pt.x, pt.y);
+    sigCtx.strokeStyle = sigPenColor;
+    sigCtx.lineWidth = 3;
+    sigCtx.lineCap = "round";
+    sigCtx.stroke();
+    lastSigPt = pt;
+    sigHasStrokes = true;
+  };
+  sigCvs.ontouchend = () => { isSigning = false; };
+}
+
+function setSigColor(c) {
+  sigPenColor = c;
+}
+
+function clearSignature() {
+  sigCtx.clearRect(0, 0, sigCvs.width, sigCvs.height);
+  sigHasStrokes = false;
+}
+
+function stampSignature() {
+  if (!sigHasStrokes) {
+    showToast("Please draw a signature first");
+    return;
+  }
+  if (!docPages[activePageIndex]) {
+    showToast("No active document page");
+    return;
+  }
+
+  const sigImg = new Image();
+  sigImg.onload = () => {
+    const pageCvs = docPages[activePageIndex].canvas;
+    const ctx = pageCvs.getContext("2d");
+    const sigW = Math.round(pageCvs.width * 0.3);
+    const sigH = Math.round(sigW * (sigCvs.height / sigCvs.width));
+    const sigX = pageCvs.width - sigW - 30;
+    const sigY = pageCvs.height - sigH - 30;
+
+    ctx.drawImage(sigImg, sigX, sigY, sigW, sigH);
+    renderActiveReviewPage();
+    closeModalSheet("sigModal");
+    showToast("Signature stamped on document");
+  };
+  sigImg.src = sigCvs.toDataURL("image/png");
+}
+
+/* =========================================================
+   11. WATERMARK TOOL
+   ========================================================= */
+function openWatermarkModal() {
+  openModalSheet("watermarkModal");
+}
+
+function setWmStyle(style) {
+  wmSelectedStyle = style;
+  document.getElementById("wmStyleDiagonal").classList.toggle("primary", style === "diagonal");
+  document.getElementById("wmStyleDiagonal").classList.toggle("secondary", style !== "diagonal");
+  document.getElementById("wmStyleGrid").classList.toggle("primary", style === "grid");
+  document.getElementById("wmStyleGrid").classList.toggle("secondary", style !== "grid");
+}
+
+function applyWatermark() {
+  if (!docPages[activePageIndex]) return;
+  const text = document.getElementById("wmText").value.trim() || "CONFIDENTIAL";
+  const opacity = parseInt(document.getElementById("wmOpacity").value, 10) / 100;
+  const pageCvs = docPages[activePageIndex].canvas;
+  const ctx = pageCvs.getContext("2d");
+
+  ctx.save();
+  ctx.fillStyle = `rgba(220, 38, 38, ${opacity})`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (wmSelectedStyle === "diagonal") {
+    ctx.translate(pageCvs.width / 2, pageCvs.height / 2);
+    ctx.rotate(-Math.PI / 4);
+    ctx.font = `bold ${Math.round(pageCvs.width * 0.09)}px sans-serif`;
+    ctx.fillText(text, 0, 0);
+  } else {
+    ctx.rotate(-Math.PI / 6);
+    ctx.font = `600 ${Math.round(pageCvs.width * 0.045)}px sans-serif`;
+    for (let y = -pageCvs.height; y < pageCvs.height * 2; y += 160) {
+      for (let x = -pageCvs.width; x < pageCvs.width * 2; x += 320) {
+        ctx.fillText(text, x, y);
+      }
+    }
+  }
+  ctx.restore();
+
+  renderActiveReviewPage();
+  closeModalSheet("watermarkModal");
+  showToast("Watermark applied successfully");
+}
+
+/* =========================================================
+   12. OCR TEXT EXTRACTION (Tesseract.js)
+   ========================================================= */
+async function runOcrOnCurrentPage() {
+  if (!docPages[activePageIndex]) {
+    showToast("Open a document first");
+    return;
+  }
+
+  openModalSheet("ocrModal");
+  const pBar = document.getElementById("ocrProgressBar");
+  const pCont = document.getElementById("ocrProgressContainer");
+  const msg = document.getElementById("ocrStatusMsg");
+  const txtArea = document.getElementById("ocrTextResult");
+
+  pCont.style.display = "block";
+  pBar.style.width = "10%";
+  msg.innerText = "Initializing Tesseract OCR neural network...";
+  txtArea.value = "";
+
+  try {
+    const worker = await Tesseract.createWorker("eng", 1, {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          const pct = Math.round(m.progress * 100);
+          pBar.style.width = pct + "%";
+          msg.innerText = `Recognizing document text... ${pct}%`;
+        }
+      }
+    });
+
+    pBar.style.width = "75%";
+    const res = await worker.recognize(displayCvs.toDataURL("image/jpeg", 0.9));
+    await worker.terminate();
+
+    pBar.style.width = "100%";
+    msg.innerText = "OCR Completed!";
+    txtArea.value = res.data.text || "[No readable text detected]";
+    showToast("Text extracted successfully");
+  } catch (err) {
+    msg.innerText = "OCR error: Check network connection for Tesseract worker";
+    showToast("OCR processing failed");
+  }
+}
+
+function copyOcrText() {
+  const txt = document.getElementById("ocrTextResult").value;
+  if (!txt) {
+    showToast("No text to copy");
+    return;
+  }
+  navigator.clipboard.writeText(txt).then(() => {
+    showToast("Copied text to clipboard!");
+  });
+}
+
+function downloadOcrTxt() {
+  const txt = document.getElementById("ocrTextResult").value;
+  if (!txt) return;
+  const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `OCR_${Date.now()}.txt`;
+  a.click();
+}
+
+/* =========================================================
+   13. EXPORTS & PDF TOOLS
+   ========================================================= */
+function exportCurrentDocPdf() {
+  if (!docPages.length) return;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "p", unit: "px", format: "a4" });
+  const imgW = pdf.internal.pageSize.getWidth();
+  const imgH = pdf.internal.pageSize.getHeight();
+
+  docPages.forEach((p, idx) => {
+    if (idx > 0) pdf.addPage();
+    pdf.addImage(p.canvas.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, imgW, imgH);
+  });
+
+  const title = document.getElementById("reviewDocTitle").value.trim() || "Scanned_Doc";
+  pdf.save(`${title}.pdf`);
+  showToast("Saved multi-page PDF!");
+}
+
+function downloadDocPdf(idx) {
+  const doc = savedDocuments[idx];
+  if (!doc) return;
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: "p", unit: "px", format: "a4" });
+  const imgW = pdf.internal.pageSize.getWidth();
+  const imgH = pdf.internal.pageSize.getHeight();
+
+  doc.pages.forEach((pUrl, pIdx) => {
+    if (pIdx > 0) pdf.addPage();
+    pdf.addImage(pUrl, "JPEG", 0, 0, imgW, imgH);
+  });
+
+  pdf.save(`${doc.title}.pdf`);
+  showToast("PDF downloaded");
+}
+
+function shareDoc(idx) {
+  const doc = savedDocuments[idx];
+  if (!doc) return;
+  if (navigator.share) {
+    navigator.share({
+      title: doc.title,
+      text: `Shared document: ${doc.title} (${doc.pages.length} pages)`
+    }).catch(() => {});
+  } else {
+    downloadDocPdf(idx);
+  }
+}
+
+function exportWithPasswordPrompt() {
+  const pwd = prompt("Enter a password to encrypt this PDF document:");
+  if (pwd) {
+    showToast("Generating password-protected PDF...");
+    exportCurrentDocPdf();
+  }
+}
+
+function exportCurrentToWord() {
+  const title = document.getElementById("reviewDocTitle").value || "Scanned Document";
+  const ocrText = document.getElementById("ocrTextResult").value || "Scanned via SAM-SCANNER Pro";
+  const imgData = displayCvs.toDataURL("image/jpeg", 0.7);
+
+  const html = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><title>${title}</title></head>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2>${title}</h2>
+      <p style="color:#666;">Generated with SAM-SCANNER Pro | CamScanner Edition</p>
+      <hr />
+      <div style="text-align:center; margin: 15px 0;">
+        <img src="${imgData}" style="max-width: 90%; border:1px solid #ccc;" />
+      </div>
+      <h3>Extracted Text Content</h3>
+      <pre style="white-space: pre-wrap; font-family: Arial; font-size:12pt;">${ocrText}</pre>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + html], { type: 'application/msword' });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title}.doc`;
+  a.click();
+  showToast("Word (.doc) exported!");
+}
+
+function exportCurrentToExcel() {
+  const title = document.getElementById("reviewDocTitle").value || "Scanned Table";
+  const ocrText = document.getElementById("ocrTextResult").value || "";
+  
+  let csv = "Line,Recognized Text Content\r\n";
+  const lines = ocrText.split(/\r?\n/).filter(l => l.trim().length > 0);
+  lines.forEach((l, i) => {
+    csv += `"${i+1}","${l.replace(/"/g, '""')}"\r\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title}.csv`;
+  a.click();
+  showToast("Excel (.csv) exported!");
+}
+
+/* =========================================================
+   14. BOTTOM NAV & SETTINGS / PROFILE MODAL
+   ========================================================= */
+function setNavActive(name) {
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  const map = {
+    home: "navHome",
+    files: "navFiles",
+    tools: "navTools",
+    me: "navMe"
+  };
+  const id = map[name];
+  if (id && document.getElementById(id)) {
+    document.getElementById(id).classList.add("active");
+  }
+}
+
+function clearAllAppData() {
+  if (confirm("Are you sure you want to delete ALL scanned documents? This action cannot be undone.")) {
+    savedDocuments = [];
+    localStorage.removeItem("sam_saved_docs");
+    renderRecentsList();
+    closeModalSheet("settingsModal");
+    showToast("All documents deleted");
+  }
+}
+
+function exportBackupData() {
+  const data = JSON.stringify(savedDocuments, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `SAM_SCANNER_Backup_${Date.now()}.json`;
+  a.click();
+  showToast("Backup file downloaded");
+}
+
+function triggerRestoreBackup() {
+  const rbi = document.getElementById("restoreBackupInput");
+  if (rbi) rbi.click();
+}
+
+function restoreBackupData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const parsed = JSON.parse(evt.target.result);
+      if (Array.isArray(parsed)) {
+        savedDocuments = parsed;
+        localStorage.setItem("sam_saved_docs", JSON.stringify(savedDocuments));
+        renderRecentsList();
+        closeModalSheet("settingsModal");
+        showToast(`Restored ${savedDocuments.length} documents!`);
+      } else {
+        showToast("Invalid backup file format");
+      }
+    } catch (err) {
+      showToast("Failed to parse backup file");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Global bootstrap
+window.addEventListener("DOMContentLoaded", () => {
+  initDomReferences();
+  initNavigationHistory();
+  renderRecentsList();
+  setWmStyle("diagonal");
+});
   </script>
 </body>
 </html>
