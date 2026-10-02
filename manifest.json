@@ -1,52 +1,25 @@
 {
-  "name": "SAM-SCANNER Pro",
-  "short_name": "SAM Scan",
-  "description": "CamScanner-grade document scanner, real-time edge detection, PDF tools suite, and OCR text extractor.",
-  "start_url": "/SAM-SCANNER/",
-  "scope": "/SAM-SCANNER/",
+  "name": "SAM-SCANNER Pro | CamScanner Edition",
+  "short_name": "SAM-SCANNER",
+  "description": "Smart Document Scanner with Edge Detection, Filters, OCR, and PDF Tools",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
-  "categories": ["productivity", "utilities", "business"],
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23059669'/%3E%3Cpath d='M50 70h92v62H50z' fill='%23ffffff' rx='8'/%3E%3Ccircle cx='96' cy='101' r='20' fill='%2300f0b5'/%3E%3Ccircle cx='96' cy='101' r='14' fill='%23047857'/%3E%3Crect x='64' y='52' width='64' height='12' rx='6' fill='%2300f0b5'/%3E%3C/svg%3E",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Smart Scan",
-      "short_name": "Scan",
-      "description": "Open live scanner with real-time edge detection",
-      "url": "/SAM-SCANNER/",
-      "icons": [
-        {
-          "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
-          "sizes": "192x192"
-        }
-      ]
     },
     {
-      "name": "Import Files",
-      "short_name": "Import",
-      "description": "Import documents and images",
-      "url": "/SAM-SCANNER/",
-      "icons": [
-        {
-          "src": "https://cdn-icons-png.flaticon.com/512/3144/3144456.png",
-          "sizes": "192x192"
-        }
-      ]
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23059669'/%3E%3Cpath d='M130 180h252v170H130z' fill='%23ffffff' rx='20'/%3E%3Ccircle cx='256' cy='265' r='55' fill='%2300f0b5'/%3E%3Ccircle cx='256' cy='265' r='38' fill='%23047857'/%3E%3Crect x='170' y='135' width='172' height='32' rx='16' fill='%2300f0b5'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
