@@ -191,7 +191,19 @@
     .cam-top-close { font-size: 1.5rem; cursor: pointer; color: #fff; padding: 4px; line-height: 1; }
     .cam-top-actions { display: flex; gap: 20px; align-items: center; font-size: 1.25rem; color: #fff; }
     .cam-top-actions span { cursor: pointer; }
-    .cam-hd-badge { font-size: 0.75rem; border: 1.5px solid #fff; padding: 1px 5px; border-radius: 4px; font-weight: 800; letter-spacing: 0.5px; }
+    .cam-hd-badge { 
+      font-size: 0.75rem; 
+      border: 1.5px solid #00f0b5; 
+      color: #00f0b5; 
+      padding: 2px 7px; 
+      border-radius: 6px; 
+      font-weight: 800; 
+      letter-spacing: 0.5px; 
+      cursor: pointer; 
+      background: rgba(0, 240, 181, 0.15); 
+      transition: all 0.2s; 
+    }
+    .cam-hd-badge:active { transform: scale(0.92); }
 
     .cam-viewport { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; height: 100%; width: 100%; }
     #cameraVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -626,7 +638,7 @@
       <div class="cam-top-actions">
         <span id="flashBtn" onclick="toggleFlash()" title="Toggle Flash">⚡</span>
         <span onclick="toggleAutoEnhance()" title="Magic Enhance">✨</span>
-        <span class="cam-hd-badge">HD</span>
+        <span class="cam-hd-badge" id="camHdBtn" onclick="toggleHdResolution()" title="Toggle Camera Resolution">HD</span>
         <span onclick="openModalSheet('pdfToolsModal')">⋮</span>
       </div>
     </div>
@@ -953,7 +965,7 @@
     }
 
     function openModalSheet(modalId) {
-      if (activeModal) closeModalSheet(activeModal, true);
+      if (activeModal) closeModalSheet(modalId, true);
       const m = document.getElementById(modalId);
       if (!m) return;
       m.style.display = "flex";
@@ -998,6 +1010,61 @@
         switchScreen(state.screen, state.params || {});
       }
     });
+
+    const HD_PRESETS = [
+      { label: "HD", width: 1920, height: 1080, name: "HD 1080p" },
+      { label: "4K", width: 3840, height: 2160, name: "Ultra HD (4K / Max Sensor)" },
+      { label: "SD", width: 1280, height: 720, name: "Standard (720p)" }
+    ];
+    let currentHdIdx = 0;
+
+    async function toggleHdResolution() {
+      currentHdIdx = (currentHdIdx + 1) % HD_PRESETS.length;
+      const preset = HD_PRESETS[currentHdIdx];
+      const btn = document.getElementById("camHdBtn");
+      if (btn) {
+        btn.innerText = preset.label;
+        if (preset.label === "4K") {
+          btn.style.borderColor = "#00f0b5";
+          btn.style.color = "#00f0b5";
+          btn.style.background = "rgba(0, 240, 181, 0.25)";
+        } else if (preset.label === "HD") {
+          btn.style.borderColor = "#00f0b5";
+          btn.style.color = "#00f0b5";
+          btn.style.background = "rgba(0, 240, 181, 0.12)";
+        } else {
+          btn.style.borderColor = "#94a3b8";
+          btn.style.color = "#94a3b8";
+          btn.style.background = "rgba(148, 163, 184, 0.12)";
+        }
+      }
+      showToast(`Camera Resolution: ${preset.name}`);
+
+      if (currentStream) {
+        try {
+          const track = currentStream.getVideoTracks()[0];
+          if (track && track.applyConstraints) {
+            await track.applyConstraints({
+              width: { ideal: preset.width },
+              height: { ideal: preset.height }
+            });
+          }
+        } catch (e) {
+          try {
+            stopCamera();
+            currentStream = await requestCameraStream();
+            video.srcObject = currentStream;
+            video.onloadedmetadata = () => {
+              liveCvs.width = video.videoWidth;
+              liveCvs.height = video.videoHeight;
+              startLiveBoundaryTracking();
+            };
+          } catch (err) {
+            console.warn("HD mode switch error:", err);
+          }
+        }
+      }
+    }
 
     let currentStream = null;
     let currentFacingMode = "environment";
@@ -1154,7 +1221,9 @@
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("getUserMedia not supported");
       }
+      const preset = HD_PRESETS[currentHdIdx];
       const constraints = [
+        { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: preset.width }, height: { ideal: preset.height } }, audio: false },
         { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1920 } }, audio: false },
         { video: { facingMode: { ideal: currentFacingMode }, width: { ideal: 1280 } }, audio: false },
         { video: { facingMode: currentFacingMode }, audio: false },
@@ -1303,6 +1372,84 @@
       }
     }
 
+    function detectCornersFromImage(sourceCanvasOrVideo) {
+      const sw = 320;
+      const sh = Math.round(320 * (sourceCanvasOrVideo.videoHeight || sourceCanvasOrVideo.height) / (sourceCanvasOrVideo.videoWidth || sourceCanvasOrVideo.width));
+      trackCvs.width = sw;
+      trackCvs.height = sh;
+      trackCtx.drawImage(sourceCanvasOrVideo, 0, 0, sw, sh);
+
+      const d = trackCtx.getImageData(0, 0, sw, sh).data;
+      const gray = new Uint8Array(sw * sh);
+      for (let i = 0; i < d.length; i += 4) {
+        gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
+      }
+
+      const cx = Math.floor(sw / 2);
+      const cy = Math.floor(sh / 2);
+      const numRays = 48;
+      const boundaryPts = [];
+      const srcW = sourceCanvasOrVideo.videoWidth || sourceCanvasOrVideo.width;
+      const srcH = sourceCanvasOrVideo.videoHeight || sourceCanvasOrVideo.height;
+      const scaleX = srcW / sw;
+      const scaleY = srcH / sh;
+
+      for (let i = 0; i < numRays; i++) {
+        const angle = (2 * Math.PI * i) / numRays;
+        const cosA = Math.cos(angle);
+        const sinA = Math.sin(angle);
+        const maxR = Math.hypot(sw, sh) * 0.72;
+
+        let foundR = null;
+        for (let r = 14; r < maxR; r += 3) {
+          const xIn = Math.round(cx + (r - 4) * cosA);
+          const yIn = Math.round(cy + (r - 4) * sinA);
+          const xOut = Math.round(cx + (r + 4) * cosA);
+          const yOut = Math.round(cy + (r + 4) * sinA);
+
+          if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) {
+            foundR = r;
+            break;
+          }
+          
+          if (Math.abs(gray[yIn * sw + xIn] - gray[yOut * sw + xOut]) >= 20) {
+            foundR = r;
+            break;
+          }
+        }
+        if (foundR !== null) {
+          boundaryPts.push({ x: (cx + foundR * cosA) * scaleX, y: (cy + foundR * sinA) * scaleY });
+        }
+      }
+
+      if (boundaryPts.length >= 16) {
+        let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
+        let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
+
+        for (let pt of boundaryPts) {
+          const s = pt.x + pt.y;
+          const diff = pt.x - pt.y;
+          if (s < minSum) { minSum = s; tl = pt; }
+          if (s > maxSum) { maxSum = s; br = pt; }
+          if (diff > maxDiff) { maxDiff = diff; tr = pt; }
+          if (diff < minDiff) { minDiff = diff; bl = pt; }
+        }
+
+        const area = 0.5 * Math.abs(
+          (tl.x * tr.y - tr.x * tl.y) +
+          (tr.x * br.y - br.x * tr.y) +
+          (br.x * bl.y - bl.x * br.y) +
+          (bl.x * tl.y - tl.x * bl.y)
+        );
+        const totalArea = srcW * srcH;
+
+        if (area >= totalArea * 0.12 && area <= totalArea * 0.98) {
+          return [tl, tr, br, bl];
+        }
+      }
+      return null;
+    }
+
     function startLiveBoundaryTracking() {
       if (liveTrackingInterval) clearInterval(liveTrackingInterval);
 
@@ -1312,76 +1459,15 @@
           return;
         }
 
-        const sw = 240;
-        const sh = Math.round(240 * (video.videoHeight / video.videoWidth));
-        trackCvs.width = sw;
-        trackCvs.height = sh;
-        trackCtx.drawImage(video, 0, 0, sw, sh);
+        const detected = detectCornersFromImage(video);
 
-        const d = trackCtx.getImageData(0, 0, sw, sh).data;
-        const gray = new Uint8Array(sw * sh);
-        for (let i = 0; i < d.length; i += 4) {
-          gray[i / 4] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-        }
-
-        let bestCx = Math.floor(sw / 2), bestCy = Math.floor(sh / 2);
-        let maxLum = 0;
-        for (let y = Math.floor(sh * 0.3); y < sh * 0.7; y += 12) {
-          for (let x = Math.floor(sw * 0.3); x < sw * 0.7; x += 12) {
-            const lum = gray[y * sw + x];
-            if (lum > maxLum) { maxLum = lum; bestCx = x; bestCy = y; }
-          }
-        }
-
-        const numRays = 48;
-        const boundaryPts = [];
-        const scaleX = video.videoWidth / sw;
-        const scaleY = video.videoHeight / sh;
-
-        for (let i = 0; i < numRays; i++) {
-          const angle = (2 * Math.PI * i) / numRays;
-          const cosA = Math.cos(angle), sinA = Math.sin(angle);
-          const maxR = Math.hypot(sw, sh);
-
-          let foundR = null;
-          for (let r = 12; r < maxR; r += 3) {
-            const xIn = Math.round(bestCx + (r - 4) * cosA);
-            const yIn = Math.round(bestCy + (r - 4) * sinA);
-            const xOut = Math.round(bestCx + (r + 4) * cosA);
-            const yOut = Math.round(bestCy + (r + 4) * sinA);
-
-            if (xIn < 0 || xIn >= sw || yIn < 0 || yIn >= sh || xOut < 0 || xOut >= sw || yOut < 0 || yOut >= sh) break;
-            
-            if (gray[yIn * sw + xIn] - gray[yOut * sw + xOut] >= 22) {
-              foundR = r;
-              break;
-            }
-          }
-          if (foundR !== null) {
-            boundaryPts.push({ x: (bestCx + foundR * cosA) * scaleX, y: (bestCy + foundR * sinA) * scaleY });
-          }
-        }
-
-        if (boundaryPts.length >= 18) {
-          let tl = boundaryPts[0], tr = boundaryPts[0], br = boundaryPts[0], bl = boundaryPts[0];
-          let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
-
-          for (let pt of boundaryPts) {
-            const s = pt.x + pt.y, diff = pt.x - pt.y;
-            if (s < minSum) { minSum = s; tl = pt; }
-            if (s > maxSum) { maxSum = s; br = pt; }
-            if (diff > maxDiff) { maxDiff = diff; tr = pt; }
-            if (diff < minDiff) { minDiff = diff; bl = pt; }
-          }
-
-          const rawCorners = [tl, tr, br, bl];
-
+        if (detected) {
           if (!smoothedCorners) {
-            smoothedCorners = rawCorners;
+            smoothedCorners = detected;
           } else {
             for (let c = 0; c < 4; c++) {
-              smoothedCorners[c].x = smoothedCorners[c].x * 0.65 + rawCorners[c].x * 0.35;
-              smoothedCorners[c].y = smoothedCorners[c].y * 0.65 + rawCorners[c].y * 0.35;
+              smoothedCorners[c].x = smoothedCorners[c].x * 0.65 + detected[c].x * 0.35;
+              smoothedCorners[c].y = smoothedCorners[c].y * 0.65 + detected[c].y * 0.35;
             }
           }
           liveDetectedCorners = smoothedCorners;
@@ -1443,33 +1529,38 @@
         return;
       }
 
-      const img = new Image();
-      img.onload = () => {
-        rawCapturedImage = img;
-        const initialCorners = liveDetectedCorners ? JSON.parse(JSON.stringify(liveDetectedCorners)) : [
-          { x: img.width * 0.08, y: img.height * 0.08 },
-          { x: img.width * 0.92, y: img.height * 0.08 },
-          { x: img.width * 0.92, y: img.height * 0.92 },
-          { x: img.width * 0.08, y: img.height * 0.92 }
-        ];
+      showToast("Scanning & cropping page...");
 
-        if (capturePillMode === "batch") {
-          const dewarped = performDewarp(img, initialCorners);
-          docPages.push({
-            rawDewarpedCanvas: dewarped,
-            activeFilter: "enhance",
-            enhancedCanvas: generateEnhancedCanvas(dewarped, "enhance")
-          });
-          showToast(`Captured page ${docPages.length}`);
-          updateRightDeckBtn();
-        } else {
-          stopCamera();
-          cropCorners = initialCorners;
-          pushScreen("crop");
-          initCropInteractiveCanvas();
-        }
+      const detected = detectCornersFromImage(snapCanvas) || (liveDetectedCorners ? JSON.parse(JSON.stringify(liveDetectedCorners)) : null) || [
+        { x: snapCanvas.width * 0.05, y: snapCanvas.height * 0.05 },
+        { x: snapCanvas.width * 0.95, y: snapCanvas.height * 0.05 },
+        { x: snapCanvas.width * 0.95, y: snapCanvas.height * 0.95 },
+        { x: snapCanvas.width * 0.05, y: snapCanvas.height * 0.95 }
+      ];
+
+      const dewarped = performDewarp(snapCanvas, detected);
+      const enhanced = generateEnhancedCanvas(dewarped, "enhance");
+
+      const newPage = {
+        originalPhoto: snapCanvas,
+        cropCorners: detected,
+        rawDewarpedCanvas: dewarped,
+        activeFilter: "enhance",
+        enhancedCanvas: enhanced
       };
-      img.src = snapCanvas.toDataURL("image/jpeg", 0.96);
+
+      if (capturePillMode === "batch") {
+        docPages.push(newPage);
+        showToast(`Captured page ${docPages.length}`);
+        updateRightDeckBtn();
+      } else {
+        stopCamera();
+        docPages = [newPage];
+        activePageIndex = 0;
+        pushScreen("review");
+        setupReviewScreen();
+        showToast("Page scanned! Extra boundary cropped.");
+      }
     }
 
     function handleIdCardCapture(snapCanvas) {
@@ -1485,6 +1576,13 @@
         stopCamera();
         const compositeCanvas = assembleIdCardComposite(idCardFrontCanvas, cardCanvas);
         docPages = [{
+          originalPhoto: compositeCanvas,
+          cropCorners: [
+            { x: 0, y: 0 },
+            { x: compositeCanvas.width, y: 0 },
+            { x: compositeCanvas.width, y: compositeCanvas.height },
+            { x: 0, y: compositeCanvas.height }
+          ],
           rawDewarpedCanvas: compositeCanvas,
           activeFilter: "enhance",
           enhancedCanvas: generateEnhancedCanvas(compositeCanvas, "enhance")
@@ -1567,14 +1665,16 @@
         reader.onload = (evt) => {
           const img = new Image();
           img.onload = () => {
-            const corners = [
+            const detected = detectCornersFromImage(img) || [
               { x: img.width * 0.05, y: img.height * 0.05 },
               { x: img.width * 0.95, y: img.height * 0.05 },
               { x: img.width * 0.95, y: img.height * 0.95 },
               { x: img.width * 0.05, y: img.height * 0.95 }
             ];
-            const dewarped = performDewarp(img, corners);
+            const dewarped = performDewarp(img, detected);
             newPages[idx] = {
+              originalPhoto: img,
+              cropCorners: detected,
               rawDewarpedCanvas: dewarped,
               activeFilter: "enhance",
               enhancedCanvas: generateEnhancedCanvas(dewarped, "enhance")
@@ -1784,12 +1884,17 @@
     }
 
     function autoDetectCornersOnCrop() {
-      cropCorners = [
-        { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.08 },
-        { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.08 },
-        { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.92 },
-        { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.92 }
-      ];
+      const detected = detectCornersFromImage(rawCapturedImage);
+      if (detected) {
+        cropCorners = detected;
+      } else {
+        cropCorners = [
+          { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.08 },
+          { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.08 },
+          { x: rawCapturedImage.width * 0.92, y: rawCapturedImage.height * 0.92 },
+          { x: rawCapturedImage.width * 0.08, y: rawCapturedImage.height * 0.92 }
+        ];
+      }
       drawInteractiveCropView();
       showToast("Auto corners adjusted");
     }
@@ -1825,14 +1930,28 @@
 
     function confirmCropAndProceed() {
       const dewarped = performDewarp(rawCapturedImage, cropCorners);
-      docPages = [{
-        rawDewarpedCanvas: dewarped,
-        activeFilter: "enhance",
-        enhancedCanvas: generateEnhancedCanvas(dewarped, "enhance")
-      }];
-      activePageIndex = 0;
+      const curFilter = (docPages[activePageIndex] && docPages[activePageIndex].activeFilter) ? docPages[activePageIndex].activeFilter : "enhance";
+      const enhanced = generateEnhancedCanvas(dewarped, curFilter);
+
+      if (docPages[activePageIndex]) {
+        docPages[activePageIndex].rawDewarpedCanvas = dewarped;
+        docPages[activePageIndex].enhancedCanvas = enhanced;
+        docPages[activePageIndex].cropCorners = JSON.parse(JSON.stringify(cropCorners));
+        docPages[activePageIndex].originalPhoto = rawCapturedImage;
+      } else {
+        docPages = [{
+          originalPhoto: rawCapturedImage,
+          cropCorners: JSON.parse(JSON.stringify(cropCorners)),
+          rawDewarpedCanvas: dewarped,
+          activeFilter: "enhance",
+          enhancedCanvas: enhanced
+        }];
+        activePageIndex = 0;
+      }
+
       pushScreen("review");
       setupReviewScreen();
+      showToast("Crop applied");
     }
 
     function performDewarp(img, pts) {
@@ -1903,6 +2022,7 @@
       ctx.restore();
     }
 
+    /* CAMSCANNER "MAGIC ENHANCE" FILTER ENGINE (IMAGE 2) */
     function generateEnhancedCanvas(sourceCanvas, filterType) {
       const out = document.createElement("canvas");
       out.width = sourceCanvas.width;
@@ -1926,10 +2046,10 @@
         lum[i] = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
       }
 
-      const blockSize = Math.max(16, Math.floor(Math.min(width, height) / 24));
+      const blockSize = Math.max(16, Math.floor(Math.min(width, height) / 20));
       const bxCount = Math.ceil(width / blockSize);
       const byCount = Math.ceil(height / blockSize);
-      const bgGrid = new Float32Array(bxCount * byCount);
+      const bgRaw = new Float32Array(bxCount * byCount);
 
       for (let by = 0; by < byCount; by++) {
         for (let bx = 0; bx < bxCount; bx++) {
@@ -1945,7 +2065,26 @@
               if (l > maxL) maxL = l;
             }
           }
-          bgGrid[by * bxCount + bx] = Math.max(120, maxL);
+          bgRaw[by * bxCount + bx] = Math.max(90, maxL);
+        }
+      }
+
+      // Smooth background grid to eliminate block artifacts
+      const bgGrid = new Float32Array(bxCount * byCount);
+      for (let by = 0; by < byCount; by++) {
+        for (let bx = 0; bx < bxCount; bx++) {
+          let sum = 0, count = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            const ny = by + dy;
+            if (ny < 0 || ny >= byCount) continue;
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = bx + dx;
+              if (nx < 0 || nx >= bxCount) continue;
+              sum += bgRaw[ny * bxCount + nx];
+              count++;
+            }
+          }
+          bgGrid[by * bxCount + bx] = sum / count;
         }
       }
 
@@ -1962,43 +2101,61 @@
           const l = lum[y * width + x];
 
           if (filterType === "enhance" || filterType === "magic_pro") {
-            const norm = (l / bg);
-            let factor;
-            if (norm > 0.82) {
-              factor = 1.0 + (norm - 0.82) * 1.5;
+            const scale = 255.0 / Math.max(bg, 80.0);
+            let rn = r * scale;
+            let gn = g * scale;
+            let bn = b * scale;
+            const normLum = 0.299 * rn + 0.587 * gn + 0.114 * bn;
+
+            if (normLum >= 195) {
+              const f = 1.0 + ((normLum - 195) / (255 - 195)) * 0.35;
+              rn = Math.min(255.0, rn * f);
+              gn = Math.min(255.0, gn * f);
+              bn = Math.min(255.0, bn * f);
             } else {
-              factor = Math.pow(norm / 0.82, filterType === "magic_pro" ? 1.4 : 1.25);
+              const gamma = filterType === "magic_pro" ? 1.35 : 1.20;
+              const factor = Math.pow(normLum / 195.0, gamma);
+              const mult = (factor * 195.0) / Math.max(normLum, 1.0);
+              rn = rn * mult;
+              gn = gn * mult;
+              bn = bn * mult;
             }
 
-            r = Math.min(255, Math.max(0, r * (factor / (l || 1))));
-            g = Math.min(255, Math.max(0, g * (factor / (l || 1))));
-            b = Math.min(255, Math.max(0, b * (factor / (l || 1))));
+            const gray = 0.299 * rn + 0.587 * gn + 0.114 * bn;
+            const sat = filterType === "enhance" ? 1.25 : 1.10;
+            rn = gray + (rn - gray) * sat;
+            gn = gray + (gn - gray) * sat;
+            bn = gray + (bn - gray) * sat;
 
-            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
-            r = Math.min(255, Math.max(0, gray + (r - gray) * 1.25));
-            g = Math.min(255, Math.max(0, gray + (g - gray) * 1.25));
-            b = Math.min(255, Math.max(0, gray + (b - gray) * 1.25));
+            data[idx] = Math.min(255, Math.max(0, Math.round(rn)));
+            data[idx + 1] = Math.min(255, Math.max(0, Math.round(gn)));
+            data[idx + 2] = Math.min(255, Math.max(0, Math.round(bn)));
 
           } else if (filterType === "no_shadow") {
-            const scale = 255 / bg;
-            r = Math.min(255, r * scale);
-            g = Math.min(255, r * scale);
-            b = Math.min(255, b * scale);
+            const scale = 255.0 / Math.max(bg, 80.0);
+            data[idx] = Math.min(255, Math.round(r * scale));
+            data[idx + 1] = Math.min(255, Math.round(g * scale));
+            data[idx + 2] = Math.min(255, Math.round(b * scale));
 
           } else if (filterType === "bw") {
-            const isPaper = l > bg * 0.78;
+            const isPaper = l >= bg * 0.76;
             const val = isPaper ? 255 : 0;
-            r = g = b = val;
+            data[idx] = val;
+            data[idx + 1] = val;
+            data[idx + 2] = val;
 
           } else if (filterType === "gray") {
-            const norm = Math.min(1.0, l / bg);
-            const val = Math.min(255, Math.max(0, Math.pow(norm, 1.25) * 255));
-            r = g = b = val;
+            const norm = Math.min(1.0, l / Math.max(bg, 80.0));
+            let val;
+            if (norm >= 0.78) {
+              val = 255;
+            } else {
+              val = Math.min(255, Math.max(0, Math.round(Math.pow(norm / 0.78, 1.2) * 200)));
+            }
+            data[idx] = val;
+            data[idx + 1] = val;
+            data[idx + 2] = val;
           }
-
-          data[idx] = r;
-          data[idx + 1] = g;
-          data[idx + 2] = b;
         }
       }
 
@@ -2006,6 +2163,7 @@
       return out;
     }
 
+    /* REVIEW SCREEN CONTROLLER */
     function setupReviewScreen() {
       if (!docPages.length) return;
       renderActiveDocPage();
@@ -2148,18 +2306,23 @@
     function reCropCurrentPage() {
       const page = docPages[activePageIndex];
       if (!page) return;
-      rawCapturedImage = new Image();
-      rawCapturedImage.onload = () => {
-        cropCorners = [
-          { x: 0, y: 0 },
-          { x: rawCapturedImage.width, y: 0 },
-          { x: rawCapturedImage.width, y: rawCapturedImage.height },
-          { x: 0, y: rawCapturedImage.height }
+
+      const srcImg = page.originalPhoto;
+      if (!srcImg) return;
+
+      const nImg = new Image();
+      nImg.onload = () => {
+        rawCapturedImage = nImg;
+        cropCorners = page.cropCorners ? JSON.parse(JSON.stringify(page.cropCorners)) : [
+          { x: nImg.width * 0.05, y: nImg.height * 0.05 },
+          { x: nImg.width * 0.95, y: nImg.height * 0.05 },
+          { x: nImg.width * 0.95, y: nImg.height * 0.95 },
+          { x: nImg.width * 0.05, y: nImg.height * 0.95 }
         ];
         pushScreen("crop");
         initCropInteractiveCanvas();
       };
-      rawCapturedImage.src = page.rawDewarpedCanvas.toDataURL("image/jpeg", 0.95);
+      nImg.src = srcImg.toDataURL ? srcImg.toDataURL("image/jpeg", 0.96) : srcImg.src;
     }
 
     function promptRenameCurrentDoc() {
@@ -2209,6 +2372,13 @@
           cvs.height = img.height;
           cvs.getContext("2d").drawImage(img, 0, 0);
           docPages[pIdx] = {
+            originalPhoto: img,
+            cropCorners: [
+              { x: 0, y: 0 },
+              { x: img.width, y: 0 },
+              { x: img.width, y: img.height },
+              { x: 0, y: img.height }
+            ],
             rawDewarpedCanvas: cvs,
             activeFilter: "enhance",
             enhancedCanvas: cvs
@@ -2464,7 +2634,7 @@
             <img src="${imgData}" style="max-width: 90%; border:1px solid #ccc;" />
           </div>
           <h3>Extracted Text</h3>
-          <pre style="white-space: pre-wrap; font-family: Arial; font-size:12pt;">${ocrText}</space: pre-wrap; font-family: Arial; font-size:12pt;">${ocrText}</pre>
+          <pre style="white-space: pre-wrap; font-family: Arial; font-size:12pt;">${ocrText}</pre>
         </body>
         </html>
       `;
