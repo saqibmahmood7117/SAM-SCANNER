@@ -909,14 +909,17 @@ body { background: #000; color: #fff; display: flex; flex-direction: column; hei
       <!-- Friendly Fallback Screen if camera is blocked/denied -->
       <div id="camPermissionNotice">
         <div style="font-size:2.8rem;">📷</div>
-        <h3 style="font-size:1.1rem; font-weight:700;">Live Camera Unavailable</h3>
-        <p style="font-size:0.82rem; color:#94a3b8; max-width:290px; margin-bottom:12px; line-height:1.4;">
-          Use your phone's camera directly or choose photos from your gallery:
+        <h3 style="font-size:1.1rem; font-weight:700;" id="camNoticeTitle">Mobile Camera Ready</h3>
+        <p style="font-size:0.8rem; color:#94a3b8; max-width:300px; margin-bottom:10px; line-height:1.4;" id="camNoticeDesc">
+          Tap below to capture with auto-boundary detection, or retry the live viewfinder:
         </p>
-        <button class="pill-btn primary" style="padding:12px 24px; font-size:0.9rem;" onclick="document.getElementById('nativeShutterInput').click()">
+        <button class="pill-btn primary" style="padding:12px 24px; font-size:0.9rem; width:240px;" onclick="document.getElementById('nativeShutterInput').click()">
           Take Photo (Phone Camera)
         </button>
-        <button class="pill-btn secondary" style="margin-top:6px;" onclick="document.getElementById('globalFileInput').click()">
+        <button class="pill-btn secondary" style="margin-top:6px; width:240px;" onclick="retryLiveMobileCamera()">
+          🔄 Retry Live Camera Stream
+        </button>
+        <button class="pill-btn secondary" style="margin-top:6px; width:240px;" onclick="document.getElementById('globalFileInput').click()">
           Choose from Gallery
         </button>
       </div>
@@ -1527,33 +1530,30 @@ async function toggleHdResolution() {
     try {
       const track = currentStream.getVideoTracks()[0];
       if (track && track.applyConstraints) {
+        const caps = track.getCapabilities ? track.getCapabilities() : {};
+        const maxW = (caps.width && caps.width.max) ? Math.min(preset.width, caps.width.max) : preset.width;
+        const maxH = (caps.height && caps.height.max) ? Math.min(preset.height, caps.height.max) : preset.height;
         await track.applyConstraints({
-          width: { ideal: preset.width },
-          height: { ideal: preset.height }
+          width: { ideal: maxW },
+          height: { ideal: maxH }
         });
         const actualSettings = track.getSettings ? track.getSettings() : {};
-        const actW = actualSettings.width || video.videoWidth || preset.width;
-        const actH = actualSettings.height || video.videoHeight || preset.height;
+        const actW = actualSettings.width || video.videoWidth || maxW;
+        const actH = actualSettings.height || video.videoHeight || maxH;
+        if (permNotice) permNotice.style.display = "none";
+        if (video) video.style.display = "block";
         showToast(`${preset.name}: ${actW}x${actH}`);
         return;
       }
-    } catch (e) {}
-
-    try {
-      stopCamera();
-      currentStream = await requestCameraStream();
-      video.srcObject = currentStream;
-      video.onloadedmetadata = () => {
-        liveCvs.width = video.videoWidth;
-        liveCvs.height = video.videoHeight;
-        startLiveBoundaryTracking();
-        showToast(`${preset.name}: ${video.videoWidth}x${video.videoHeight}`);
-      };
-    } catch (err) {
-      showToast(`${preset.name} active`);
+    } catch (e) {
+      // Keep currentStream running on mobile if 4K video constraint isn't supported by hardware!
+      if (permNotice) permNotice.style.display = "none";
+      if (video) video.style.display = "block";
+      showToast(`${preset.name} (Full Sensor Photo Capture Active)`);
+      return;
     }
   } else {
-    showToast(`Target Resolution: ${preset.name}`);
+    retryLiveMobileCamera();
   }
 }
 
@@ -1729,17 +1729,16 @@ async function requestCameraStream() {
     {
       video: {
         facingMode: { ideal: currentFacingMode },
-        width: { ideal: preset.width },
-        height: { ideal: preset.height },
-        focusMode: { ideal: "continuous" }
+        width: { ideal: Math.min(preset.width, 1920) },
+        height: { ideal: Math.min(preset.height, 1080) }
       },
       audio: false
     },
     {
       video: {
         facingMode: { ideal: currentFacingMode },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
       },
       audio: false
     },
@@ -1754,10 +1753,58 @@ async function requestCameraStream() {
 
   for (let c of constraints) {
     try {
-      return await navigator.mediaDevices.getUserMedia(c);
+      const stream = await navigator.mediaDevices.getUserMedia(c);
+      if (stream) return stream;
     } catch (e) {}
   }
+
+  // Fallback: enumerate mobile videoinput devices directly
+  if (navigator.mediaDevices.enumerateDevices) {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === "videoinput");
+      if (videoDevices.length > 0) {
+        const backCam = videoDevices.find(d => /back|rear|environment/i.test(d.label)) || videoDevices[videoDevices.length - 1];
+        return await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: backCam.deviceId } },
+          audio: false
+        });
+      }
+    } catch (e) {}
+  }
+
   throw new Error("Camera stream unavailable");
+}
+
+async function attachMobileVideoStream(stream) {
+  currentStream = stream;
+  if (permNotice) permNotice.style.display = "none";
+  if (video) {
+    video.style.display = "block";
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.muted = true;
+    video.srcObject = stream;
+    video.onloadedmetadata = async () => {
+      try { await video.play(); } catch (e) {}
+      liveCvs.width = video.videoWidth || 1280;
+      liveCvs.height = video.videoHeight || 720;
+      startLiveBoundaryTracking();
+    };
+  }
+}
+
+async function retryLiveMobileCamera() {
+  stopCamera();
+  try {
+    const stream = await requestCameraStream();
+    await attachMobileVideoStream(stream);
+    showToast("Live mobile camera connected!");
+  } catch (err) {
+    if (video) video.style.display = "none";
+    if (permNotice) permNotice.style.display = "flex";
+    showToast("Tap 'Take Photo (Phone Camera)' to scan with auto-boundary crop");
+  }
 }
 
 async function startScannerFlow(mode = "scan") {
@@ -1767,13 +1814,8 @@ async function startScannerFlow(mode = "scan") {
   if (video) video.style.display = "block";
 
   try {
-    currentStream = await requestCameraStream();
-    video.srcObject = currentStream;
-    video.onloadedmetadata = () => {
-      liveCvs.width = video.videoWidth;
-      liveCvs.height = video.videoHeight;
-      startLiveBoundaryTracking();
-    };
+    const stream = await requestCameraStream();
+    await attachMobileVideoStream(stream);
   } catch (err) {
     if (video) video.style.display = "none";
     if (permNotice) permNotice.style.display = "flex";
@@ -1988,75 +2030,95 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
     bCh[i] = imgData[idx + 2];
   }
 
-  // Morphological closing (radius=3 -> 7x7 window) erases printed text inside the document
-  // so internal lines never confuse the outer contour detector
+  // 7x7 Morphological Closing erases printed text and lines inside the page
   const rc = morphCloseChannel(rCh, sw, sh, 3);
   const gc = morphCloseChannel(gCh, sw, sh, 3);
   const bc = morphCloseChannel(bCh, sw, sh, 3);
 
-  // Sample central 30%x30% region for paper reference color (Rp, Gp, Bp)
-  const cy0 = Math.floor(sh * 0.35), cy1 = Math.floor(sh * 0.65);
-  const cx0 = Math.floor(sw * 0.35), cx1 = Math.floor(sw * 0.65);
-  const centerR = [], centerG = [], centerB = [];
+  // Compute Illumination-Invariant Chromaticity (so phone/hand shadows on mobile never break page detection!)
+  const nr = new Float32Array(len);
+  const ng = new Float32Array(len);
+  const nb = new Float32Array(len);
+  const lum = new Float32Array(len);
+
+  for (let i = 0; i < len; i++) {
+    const sum = rc[i] + gc[i] + bc[i] + 1.0;
+    nr[i] = (rc[i] / sum) * 255.0;
+    ng[i] = (gc[i] / sum) * 255.0;
+    nb[i] = (bc[i] / sum) * 255.0;
+    lum[i] = 0.299 * rc[i] + 0.587 * gc[i] + 0.114 * bc[i];
+  }
+
+  // Sample central 35%x35% region for paper reference chromaticity & luminance
+  const cy0 = Math.floor(sh * 0.32), cy1 = Math.floor(sh * 0.68);
+  const cx0 = Math.floor(sw * 0.32), cx1 = Math.floor(sw * 0.68);
+  const centerNR = [], centerNG = [], centerNB = [], centerLum = [];
   for (let y = cy0; y < cy1; y += 2) {
     for (let x = cx0; x < cx1; x += 2) {
       const idx = y * sw + x;
-      centerR.push(rc[idx]);
-      centerG.push(gc[idx]);
-      centerB.push(bc[idx]);
+      centerNR.push(nr[idx]);
+      centerNG.push(ng[idx]);
+      centerNB.push(nb[idx]);
+      centerLum.push(lum[idx]);
     }
   }
-  const rp = quickMedian(centerR);
-  const gp = quickMedian(centerG);
-  const bp = quickMedian(centerB);
+  const nrP = quickMedian(centerNR);
+  const ngP = quickMedian(centerNG);
+  const nbP = quickMedian(centerNB);
+  centerLum.sort((a, b) => a - b);
+  const lumP = centerLum[Math.floor(centerLum.length * 0.68)] || 180;
 
-  // Sample outer 5% border frame for desk/background reference color (Rd, Gd, Bd)
-  const bm = Math.max(3, Math.floor(Math.min(sw, sh) * 0.05));
-  const borderR = [], borderG = [], borderB = [];
+  // Sample outer 4% border frame for desk/background reference
+  const bm = Math.max(2, Math.floor(Math.min(sw, sh) * 0.04));
+  const borderNR = [], borderNG = [], borderNB = [], borderLum = [];
   for (let x = 0; x < sw; x += 2) {
     for (let b = 0; b < bm; b++) {
       const iTop = b * sw + x;
       const iBot = (sh - 1 - b) * sw + x;
-      borderR.push(rc[iTop], rc[iBot]);
-      borderG.push(gc[iTop], gc[iBot]);
-      borderB.push(bc[iTop], bc[iBot]);
+      borderNR.push(nr[iTop], nr[iBot]);
+      borderNG.push(ng[iTop], ng[iBot]);
+      borderNB.push(nb[iTop], nb[iBot]);
+      borderLum.push(lum[iTop], lum[iBot]);
     }
   }
   for (let y = bm; y < sh - bm; y += 2) {
     for (let b = 0; b < bm; b++) {
       const iLeft = y * sw + b;
       const iRight = y * sw + (sw - 1 - b);
-      borderR.push(rc[iLeft], rc[iRight]);
-      borderG.push(gc[iLeft], gc[iRight]);
-      borderB.push(bc[iLeft], bc[iRight]);
+      borderNR.push(nr[iLeft], nr[iRight]);
+      borderNG.push(ng[iLeft], ng[iRight]);
+      borderNB.push(nb[iLeft], nb[iRight]);
+      borderLum.push(lum[iLeft], lum[iRight]);
     }
   }
-  const rd = quickMedian(borderR);
-  const gd = quickMedian(borderG);
-  const bd = quickMedian(borderB);
+  const nrD = quickMedian(borderNR);
+  const ngD = quickMedian(borderNG);
+  const nbD = quickMedian(borderNB);
+  const lumD = quickMedian(borderLum);
 
-  // Compute color separation & 3x3 Sobel gradient magnitude on morphologically closed channels
-  const distPaper = new Float32Array(len);
-  const distDesk = new Float32Array(len);
+  // Shadow-tolerant paper vs desk classification
   const mask = new Uint8Array(len);
-  const colorSep = Math.hypot(rp - rd, gp - gd, bp - bd);
-  const tol = Math.max(15.0, colorSep * 0.52);
+  const chromSep = Math.hypot(nrP - nrD, ngP - ngD, nbP - nbD);
+  const lumSep = Math.abs(lumP - lumD);
 
   for (let i = 0; i < len; i++) {
-    const dp = Math.hypot(rc[i] - rp, gc[i] - gp, bc[i] - bp);
-    const dd = Math.hypot(rc[i] - rd, gc[i] - gd, bc[i] - bd);
-    distPaper[i] = dp;
-    distDesk[i] = dd;
-    if (colorSep >= 16.0) {
-      mask[i] = (dp < dd && dp <= tol) ? 1 : 0;
+    const cDistP = Math.hypot(nr[i] - nrP, ng[i] - ngP, nb[i] - nbP);
+    const cDistD = Math.hypot(nr[i] - nrD, ng[i] - ngD, nb[i] - nbD);
+    const lDistP = Math.abs(lum[i] - lumP);
+    const lDistD = Math.abs(lum[i] - lumD);
+
+    const dp = cDistP * 1.85 + lDistP * 0.42;
+    const dd = cDistD * 1.85 + lDistD * 0.42;
+
+    if (chromSep >= 4.0 || lumSep >= 14.0) {
+      mask[i] = (dp < dd * 1.06) ? 1 : 0;
     } else {
-      // Low color contrast (e.g., white paper on white/beige table): use brightness & low saturation
-      const lum = 0.299 * rc[i] + 0.587 * gc[i] + 0.114 * bc[i];
-      const pLum = 0.299 * rp + 0.587 * gp + 0.114 * bp;
-      mask[i] = Math.abs(lum - pLum) <= 22 ? 1 : 0;
+      // Same-colored surface: rely on low saturation & paper brightness
+      mask[i] = (lDistP <= 28 && cDistP <= 12) ? 1 : 0;
     }
   }
 
+  // 3x3 Sobel gradient magnitude on morphologically closed channels
   const grad = new Float32Array(len);
   const gradSamples = [];
   for (let y = 1; y < sh - 1; y++) {
@@ -2070,27 +2132,25 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
     }
   }
   gradSamples.sort((a, b) => a - b);
-  const gradThresh = Math.max(9.5, gradSamples[Math.floor(gradSamples.length * 0.86)] || 12.0);
+  const gradThresh = Math.max(8.0, gradSamples[Math.floor(gradSamples.length * 0.84)] || 10.5);
 
-  // Scan inward from all 4 image borders (Left, Right, Top, Bottom) to collect true outer contour points
+  // Scan inward from all 4 borders (Left, Right, Top, Bottom)
   const contourPts = [];
-  const margin = 3;
+  const margin = 2;
 
   for (let y = margin; y < sh - margin; y += 2) {
-    // Left -> Right
-    for (let x = margin; x < Math.floor(sw * 0.85); x++) {
+    for (let x = margin; x < Math.floor(sw * 0.86); x++) {
       const idx = y * sw + x;
       const idxIn = y * sw + Math.min(sw - 1, x + 3);
-      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && distPaper[idxIn] <= tol * 1.15)) {
+      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && mask[idxIn])) {
         contourPts.push({ x, y });
         break;
       }
     }
-    // Right -> Left
-    for (let x = sw - margin - 1; x > Math.floor(sw * 0.15); x--) {
+    for (let x = sw - margin - 1; x > Math.floor(sw * 0.14); x--) {
       const idx = y * sw + x;
       const idxIn = y * sw + Math.max(0, x - 3);
-      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && distPaper[idxIn] <= tol * 1.15)) {
+      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && mask[idxIn])) {
         contourPts.push({ x, y });
         break;
       }
@@ -2098,20 +2158,18 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
   }
 
   for (let x = margin; x < sw - margin; x += 2) {
-    // Top -> Bottom
-    for (let y = margin; y < Math.floor(sh * 0.85); y++) {
+    for (let y = margin; y < Math.floor(sh * 0.86); y++) {
       const idx = y * sw + x;
       const idxIn = Math.min(sh - 1, y + 3) * sw + x;
-      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && distPaper[idxIn] <= tol * 1.15)) {
+      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && mask[idxIn])) {
         contourPts.push({ x, y });
         break;
       }
     }
-    // Bottom -> Top
-    for (let y = sh - margin - 1; y > Math.floor(sh * 0.15); y--) {
+    for (let y = sh - margin - 1; y > Math.floor(sh * 0.14); y--) {
       const idx = y * sw + x;
       const idxIn = Math.max(0, y - 3) * sw + x;
-      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && distPaper[idxIn] <= tol * 1.15)) {
+      if ((mask[idx] && mask[idxIn]) || (grad[idx] >= gradThresh && mask[idxIn])) {
         contourPts.push({ x, y });
         break;
       }
@@ -2121,7 +2179,7 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
   const scaleX = srcW / sw;
   const scaleY = srcH / sh;
 
-  if (contourPts.length >= 20) {
+  if (contourPts.length >= 16) {
     let tl = contourPts[0], tr = contourPts[0], br = contourPts[0], bl = contourPts[0];
     let minSum = Infinity, maxSum = -Infinity, minDiff = Infinity, maxDiff = -Infinity;
 
@@ -2135,7 +2193,6 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
     }
 
     const corners = [tl, tr, br, bl];
-    // Iterative Max-Area Quadrilateral Refinement along the outer contour hull
     for (let iter = 0; iter < 3; iter++) {
       for (let i = 0; i < 4; i++) {
         const pPrev = corners[(i + 3) % 4];
@@ -2160,7 +2217,6 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
       y: Math.max(0, Math.min(srcH, c.y * scaleY))
     }));
 
-    // Verify quad area is between 10% and 97% of frame
     const area = 0.5 * Math.abs(
       (scaledQuad[0].x * scaledQuad[1].y - scaledQuad[1].x * scaledQuad[0].y) +
       (scaledQuad[1].x * scaledQuad[2].y - scaledQuad[2].x * scaledQuad[1].y) +
@@ -2169,7 +2225,7 @@ function detectCornersFromImage(sourceCanvasOrVideo) {
     );
     const totalArea = srcW * srcH;
 
-    if (area >= totalArea * 0.10 && area <= totalArea * 0.97) {
+    if (area >= totalArea * 0.08 && area <= totalArea * 0.98) {
       return scaledQuad;
     }
   }
@@ -2342,20 +2398,28 @@ async function processCameraCapture() {
     updateRightDeckBtn();
   } else {
     stopCamera();
-    // Auto-crop extra boundary and present clean document directly in front of the user
+    // Show detected cyan contour boundary on Crop screen first so mobile user sees the locked page boundary & can tap Next!
     const dewarped = performDewarp(photoCanvas, detected);
     const enhanced = generateEnhancedCanvas(dewarped, "enhance");
     docPages = [{
       originalPhoto: photoCanvas,
-      cropCorners: detected,
+      cropCorners: JSON.parse(JSON.stringify(detected)),
       rawDewarpedCanvas: dewarped,
       activeFilter: "enhance",
       enhancedCanvas: enhanced
     }];
     activePageIndex = 0;
-    pushScreen("review");
-    setupReviewScreen();
-    showToast("Page contour cropped & enhanced! Tap Crop to fine-tune.");
+    const snapImg = new Image();
+    snapImg.onload = () => {
+      rawCapturedImage = snapImg;
+      cropCorners = JSON.parse(JSON.stringify(detected));
+      pushScreen("crop");
+      setTimeout(() => {
+        initCropInteractiveCanvas();
+        showToast("Page boundary detected! Tap 'Next ❯' to crop & enhance.");
+      }, 40);
+    };
+    snapImg.src = photoCanvas.toDataURL("image/jpeg", 0.96);
   }
 }
 
@@ -2446,31 +2510,55 @@ function assembleIdCardComposite(frontCanvas, backCanvas) {
   return a4;
 }
 
+function normalizeMobilePhotoCanvas(img) {
+  // Downscale 12MP-48MP mobile camera photos to 1600px max dimension so mobile browser canvas never overflows RAM
+  const maxAllowed = 1600;
+  let w = img.width || 1200;
+  let h = img.height || 1600;
+  if (Math.max(w, h) > maxAllowed) {
+    const scale = maxAllowed / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  c.getContext("2d").drawImage(img, 0, 0, w, h);
+  return c;
+}
+
 function handleImportedFiles(e) {
   const files = Array.from(e.target.files);
   if (!files.length) return;
 
-  showToast(`Detecting edges on ${files.length} image(s)...`);
+  showToast(`Detecting page boundary on ${files.length} photo(s)...`);
   stopCamera();
 
   let loadedCount = 0;
   const newPages = [];
+  let firstNormImg = null;
+  let firstDetectedCorners = null;
 
   files.forEach((file, idx) => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       const img = new Image();
       img.onload = () => {
-        const detected = detectCornersFromImage(img) || [
-          { x: img.width * 0.05, y: img.height * 0.05 },
-          { x: img.width * 0.95, y: img.height * 0.05 },
-          { x: img.width * 0.95, y: img.height * 0.95 },
-          { x: img.width * 0.05, y: img.height * 0.95 }
+        const normCvs = normalizeMobilePhotoCanvas(img);
+        const detected = detectCornersFromImage(normCvs) || [
+          { x: normCvs.width * 0.06, y: normCvs.height * 0.06 },
+          { x: normCvs.width * 0.94, y: normCvs.height * 0.06 },
+          { x: normCvs.width * 0.94, y: normCvs.height * 0.94 },
+          { x: normCvs.width * 0.06, y: normCvs.height * 0.94 }
         ];
-        const dewarped = performDewarp(img, detected);
+        if (idx === 0) {
+          firstNormImg = normCvs;
+          firstDetectedCorners = detected;
+        }
+        const dewarped = performDewarp(normCvs, detected);
         newPages[idx] = {
-          originalPhoto: img,
-          cropCorners: detected,
+          originalPhoto: normCvs,
+          cropCorners: JSON.parse(JSON.stringify(detected)),
           rawDewarpedCanvas: dewarped,
           activeFilter: "enhance",
           enhancedCanvas: generateEnhancedCanvas(dewarped, "enhance")
@@ -2480,15 +2568,32 @@ function handleImportedFiles(e) {
         if (loadedCount === files.length) {
           docPages = newPages.filter(Boolean);
           activePageIndex = 0;
-          pushScreen("review");
-          setupReviewScreen();
-          showToast("Auto-cropped & enhanced!");
+
+          if (files.length === 1 && firstNormImg) {
+            // Single mobile photo: open interactive 8-handle Crop Screen with auto-detected cyan boundary!
+            const cropImg = new Image();
+            cropImg.onload = () => {
+              rawCapturedImage = cropImg;
+              cropCorners = JSON.parse(JSON.stringify(firstDetectedCorners));
+              pushScreen("crop");
+              setTimeout(() => {
+                initCropInteractiveCanvas();
+                showToast("Boundary detected! Drag handles or tap 'Next ❯' to crop.");
+              }, 40);
+            };
+            cropImg.src = firstNormImg.toDataURL("image/jpeg", 0.95);
+          } else {
+            pushScreen("review");
+            setupReviewScreen();
+            showToast(`Auto-cropped & enhanced ${files.length} pages!`);
+          }
         }
       };
       img.src = evt.target.result;
     };
     reader.readAsDataURL(file);
   });
+  e.target.value = "";
 }
 
 function handleMergePdfFiles(e) {
